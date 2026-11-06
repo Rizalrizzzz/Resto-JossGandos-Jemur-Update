@@ -96,7 +96,6 @@ Route::prefix('dashboard')
     Route::put('/header/update', [DashboardController::class, 'updateHeader'])->name('header.update');
 
     // 2. ORDER NOW
-    Route::get('/order-buttons', [OrderButtonController::class, 'index'])->name('order-buttons.index');
     Route::put('/order-buttons/{orderButton}', [OrderButtonController::class, 'update'])->name('order-buttons.update');
 
     // 3. GALLERY CRUD

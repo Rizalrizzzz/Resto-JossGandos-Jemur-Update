@@ -8,7 +8,7 @@
     <title>Kelola About - Resto Joss Gandos</title>
     <link rel="icon" type="image/png" href="{{ asset('img/logojossgandos.png') }}">
     @vite (['resources/css/app.css', 'resources/js/app.js'])
-    <script src="https://cdn.tailwindcss.com"></script>
+
     <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css" />
 </head>
 
@@ -18,8 +18,8 @@
 
         <main class="flex-1 flex flex-col h-screen min-w-0 bg-slate-50">
             {{-- HEADER ABOUT --}}
-            <header class="flex-shrink-0 bg-white border-b border-slate-200 shadow-sm px-6 py-4 z-20">
-                <div class="flex items-center justify-between gap-4">
+            <header class="flex-shrink-0 bg-white border-b border-slate-200 shadow-sm px-4 sm:px-6 py-3 sm:py-4 z-20">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                     {{-- KIRI --}}
                     <div class="flex items-center gap-4 min-w-0">
                         <button type="button" onclick="toggleSidebar()"
@@ -32,9 +32,9 @@
                         </h1>
                     </div>
 
-                    {{-- KANAN --}}
+                    {{-- TOMBOL SIMPAN: DI BAWAH JUDUL PADA MOBILE, DI KANAN PADA DESKTOP --}}
                     <button type="button" id="saveAllAboutChanges"
-                        class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-sm transition shrink-0">
+                        class="inline-flex w-full sm:w-auto items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-sm transition">
                         <i class="uil uil-save"></i>
                         Simpan Semua Perubahan
                     </button>
@@ -45,7 +45,8 @@
             <div class="flex-1 overflow-y-auto p-6 space-y-5">
                 {{-- HERO --}}
                 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-                    <form action="{{ route('dashboard.about.hero') }}" method="POST" class="about-bulk-update-form">
+                    <form action="{{ route('dashboard.about.hero') }}" method="POST" enctype="multipart/form-data"
+                        class="about-bulk-update-form">
                         @csrf
 
                         <div class="flex justify-between items-center mb-6">
@@ -62,39 +63,50 @@
                             <div>
                                 <!-- Judul -->
                                 <div>
-                                    <label class="font-medium"> Judul </label>
+                                    <label for="aboutHeroTitle" class="font-medium"> Judul </label>
 
-                                    <input type="text" name="hero_title"
+                                    <input type="text" id="aboutHeroTitle" name="hero_title"
                                         value="{{ old('hero_title', $about->hero_title) }}"
                                         class="w-full mt-2 border rounded-xl p-3" placeholder="Tentang Kami" />
                                 </div>
 
-                                <!-- URL -->
+                                <!-- UPLOAD FOTO BACKGROUND HERO -->
                                 <div class="mt-6">
-                                    <label class="font-medium block mb-2">
-                                        URL Background Hero
+                                    <label for="heroImage" class="font-medium block mb-2">
+                                        Upload Foto (JPG/PNG/WebP, maks 2MB)
                                     </label>
 
-                                    <input type="url" id="heroImage" name="hero_image"
-                                        value="{{ old('hero_image', $about->hero_image) }}"
-                                        class="w-full border rounded-xl p-3" placeholder="https://..." />
+                                    <input type="file" id="heroImage" name="hero_image"
+                                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                        class="w-full border border-slate-200 rounded-xl p-3 bg-white
+                                               file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50
+                                               file:px-4 file:py-2 file:font-semibold file:text-indigo-700
+                                               hover:file:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+
+                                    <p class="text-xs text-slate-400 mt-2">
+                                        Pilih foto maksimal 2 MB. Preview berubah setelah file dipilih.
+                                    </p>
                                 </div>
 
-                                <!-- Preview -->
+                                <!-- PREVIEW -->
                                 <div id="heroPreview"
                                     class="mt-4 aspect-[16/9] border-2 border-dashed rounded-2xl overflow-hidden bg-slate-50 flex items-center justify-center">
-                                    <span class="text-slate-400">
-                                        Preview Gambar
-                                    </span>
+                                    @if ($about->hero_image)
+                                        <img src="{{ asset('storage/' . $about->hero_image) }}"
+                                            class="w-full h-full object-contain rounded-xl bg-white"
+                                            alt="Preview Background Hero" />
+                                    @else
+                                        <span class="text-slate-400">Preview Gambar</span>
+                                    @endif
                                 </div>
                             </div>
 
                             <!-- ================= KANAN ================= -->
 
                             <div>
-                                <label class="font-medium"> Subtitle </label>
+                                <label for="aboutHeroSubtitle" class="font-medium"> Subtitle </label>
 
-                                <textarea name="hero_subtitle" class="w-full h-[150px] mt-2 border rounded-xl p-4 resize-none"
+                                <textarea id="aboutHeroSubtitle" name="hero_subtitle" class="w-full h-[150px] mt-2 border rounded-xl p-4 resize-none"
                                     placeholder="Perjalanan kami...">{{ old('hero_subtitle', $about->hero_subtitle) }}</textarea
                                 >
                             </div>
@@ -126,10 +138,11 @@
 
                         {{-- JUDUL --}}
                         <div>
-                            <label class="font-medium"> Judul </label>
+                            <label for="aboutStoryTitle" class="font-medium"> Judul </label>
 
                             <input
                                 type="text"
+                                id="aboutStoryTitle"
                                 name="story_title"
                                 value="{{ old('story_title', $about->story_title) }}"
                                 class="w-full mt-2 border rounded-xl p-3"
@@ -139,11 +152,12 @@
 
                         {{-- ISI CERITA --}}
                         <div class="mt-6">
-                            <label class="font-medium block">
+                            <label for="aboutStoryContent" class="font-medium block">
                                 Isi Cerita
                             </label>
 
                             <textarea
+                                id="aboutStoryContent"
                                 name="story_content"
                                 rows="12"
                                 class="w-full mt-2 border rounded-xl p-4 resize-none overflow-y-auto"
@@ -336,14 +350,13 @@
                         <div class="grid md:grid-cols-[120px_1fr] gap-4">
                             {{-- TAHUN --}}
                             <div>
-                                <label
-                                    class="text-sm font-medium text-slate-600"
-                                >
+                                <label for="aboutTimelineYearNew" class="text-sm font-medium text-slate-600">
                                     Tahun
                                 </label>
 
                                 <input
                                     type="text"
+                                    id="aboutTimelineYearNew"
                                     name="year"
                                     required
                                     class="w-full mt-2 border rounded-xl p-3"
@@ -354,14 +367,13 @@
                             {{-- JUDUL + DESKRIPSI --}}
                             <div class="space-y-3">
                                 <div>
-                                    <label
-                                        class="text-sm font-medium text-slate-600"
-                                    >
+                                    <label for="aboutTimelineTitleNew" class="text-sm font-medium text-slate-600">
                                         Judul
                                     </label>
 
                                     <input
                                         type="text"
+                                        id="aboutTimelineTitleNew"
                                         name="title"
                                         required
                                         class="w-full mt-2 border rounded-xl p-3"
@@ -370,13 +382,12 @@
                                 </div>
 
                                 <div>
-                                    <label
-                                        class="text-sm font-medium text-slate-600"
-                                    >
+                                    <label for="aboutTimelineDescriptionNew" class="text-sm font-medium text-slate-600">
                                         Deskripsi
                                     </label>
 
                                     <textarea
+                                        id="aboutTimelineDescriptionNew"
                                         name="description"
                                         rows="3"
                                         required
@@ -444,11 +455,13 @@
                                     <div class="grid md:grid-cols-[120px_1fr] gap-4">
                                         {{-- TAHUN --}}
                                         <div>
-                                            <label class="text-sm font-medium text-slate-600">
+                                            <label for="aboutTimelineYear-{{ $timeline->id }}"
+                                                class="text-sm font-medium text-slate-600">
                                                 Tahun
                                             </label>
 
-                                            <input type="text" name="year" value="{{ $timeline->year }}"
+                                            <input type="text" id="aboutTimelineYear-{{ $timeline->id }}"
+                                                name="year" value="{{ $timeline->year }}"
                                                 class="w-full mt-2 border rounded-xl p-3 font-semibold" required />
                                         </div>
 
@@ -456,21 +469,25 @@
                                         <div class="space-y-3">
                                             {{-- JUDUL --}}
                                             <div>
-                                                <label class="text-sm font-medium text-slate-600">
+                                                <label for="aboutTimelineTitle-{{ $timeline->id }}"
+                                                    class="text-sm font-medium text-slate-600">
                                                     Judul
                                                 </label>
 
-                                                <input type="text" name="title" value="{{ $timeline->title }}"
+                                                <input type="text" id="aboutTimelineTitle-{{ $timeline->id }}"
+                                                    name="title" value="{{ $timeline->title }}"
                                                     class="w-full mt-2 border rounded-xl p-3" required />
                                             </div>
 
                                             {{-- DESKRIPSI --}}
                                             <div>
-                                                <label class="text-sm font-medium text-slate-600">
+                                                <label for="aboutTimelineDescription-{{ $timeline->id }}"
+                                                    class="text-sm font-medium text-slate-600">
                                                     Deskripsi
                                                 </label>
 
-                                                <textarea name="description" rows="3" class="w-full mt-2 border rounded-xl p-3 resize-none" required>{{ $timeline->description }}</textarea
+                                                <textarea id="aboutTimelineDescription-{{ $timeline->id }}" name="description" rows="3"
+                                                    class="w-full mt-2 border rounded-xl p-3 resize-none" required>{{ $timeline->description }}</textarea
                                                     >
                                                 </div>
                                             </div>
@@ -519,6 +536,7 @@
                     <form
                         action="{{ route('dashboard.about.founder') }}"
                         method="POST"
+                        enctype="multipart/form-data"
                         class="about-bulk-update-form"
                     >
                         @csrf
@@ -537,39 +555,52 @@
                         <div class="grid lg:grid-cols-3 gap-8 items-start">
                             {{-- ================= FOTO ================= --}}
                             <div class="lg:col-span-1">
-                                <label class="font-medium">
+                                <p class="font-medium">
                                     Foto Pendiri
-                                </label>
+                                </p>
 
                                 <div
                                     id="founderPreview"
                                     class="mt-3 h-[320px] border-2 border-dashed rounded-2xl overflow-hidden bg-slate-50 flex items-center justify-center cursor-pointer hover:border-red-500 transition"
                                 >
-                                    <span class="text-slate-400">
-                                        Preview Foto
-                                    </span>
+                                    @if ($about->founder_photo)
+<img src="{{ asset('storage/' . $about->founder_photo) }}"
+                                            class="w-full h-full object-cover rounded-xl" alt="Preview Foto Pendiri" />
+@else
+<span class="text-slate-400">Preview Foto</span>
+@endif
                                 </div>
+
+                                <label for="founderImage" class="block font-medium mt-4 mb-2">
+                                    Upload Foto (JPG/PNG/WebP, maks 2MB)
+                                </label>
 
                                 <input
                                     id="founderImage"
                                     name="founder_photo"
-                                    type="url"
-                                    value="{{ old('founder_photo', $about->founder_photo) }}"
-                                    class="mt-4 w-full border rounded-xl p-3"
-                                    placeholder="Masukkan URL foto pendiri"
+                                    type="file"
+                                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                    class="w-full border border-slate-200 rounded-xl p-3 bg-white
+                                           file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50
+                                           file:px-4 file:py-2 file:font-semibold file:text-indigo-700
+                                           hover:file:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 />
+                                <p class="text-xs text-slate-400 mt-2">
+                                    Pilih foto maksimal 2 MB. Preview berubah setelah file dipilih.
+                                </p>
                             </div>
 
                             {{-- ================= DATA PENDIRI ================= --}}
                             <div class="lg:col-span-2 space-y-5">
                                 {{-- Nama --}}
                                 <div>
-                                    <label class="font-medium">
+                                    <label for="aboutFounderName" class="font-medium">
                                         Nama Pendiri
                                     </label>
 
                                     <input
                                         type="text"
+                                        id="aboutFounderName"
                                         name="founder_name"
                                         value="{{ old('founder_name', $about->founder_name) }}"
                                         class="w-full mt-2 border rounded-xl p-3"
@@ -580,10 +611,11 @@
 
                                 {{-- Jabatan --}}
                                 <div>
-                                    <label class="font-medium"> Jabatan </label>
+                                    <label for="aboutFounderPosition" class="font-medium"> Jabatan </label>
 
                                     <input
                                         type="text"
+                                        id="aboutFounderPosition"
                                         name="founder_position"
                                         value="{{ old('founder_position', $about->founder_position) }}"
                                         class="w-full mt-2 border rounded-xl p-3"
@@ -594,13 +626,14 @@
 
                                 {{-- Deskripsi --}}
                                 <div>
-                                    <label class="font-medium">
+                                    <label for="aboutFounderDescription" class="font-medium">
                                         Deskripsi
                                     </label>
 
                                     <textarea
+                                        id="aboutFounderDescription"
                                         name="founder_description"
-                                        rows="8"
+                                        rows="11"
                                         class="w-full mt-2 border rounded-xl p-4"
                                         placeholder="Masukkan deskripsi pendiri..."
                                         >{{ old('founder_description', $about->founder_description) }}</textarea
@@ -641,6 +674,7 @@
                         id="formTambahTeam"
                         action="{{ route('dashboard.about.team.store') }}"
                         method="POST"
+                        enctype="multipart/form-data"
                         class="hidden mb-6 border border-slate-200 rounded-2xl p-5 bg-slate-50"
                     >
                         @csrf
@@ -648,7 +682,7 @@
                         <div class="grid lg:grid-cols-[170px_1fr] gap-6">
                             {{-- FOTO --}}
                             <div>
-                                <label class="font-medium"> Foto </label>
+                                <p class="font-medium"> Foto </p>
 
                                 <div
                                     id="newTeamPreview"
@@ -659,23 +693,35 @@
                                     </span>
                                 </div>
 
+                                <label for="newTeamPhoto" class="block font-medium mt-3 mb-2">
+                                    Upload Foto (JPG/PNG/WebP, maks 2MB)
+                                </label>
+
                                 <input
                                     id="newTeamPhoto"
-                                    type="url"
+                                    type="file"
                                     name="photo"
-                                    class="w-full mt-3 border rounded-xl p-3"
-                                    placeholder="Masukkan URL foto tim"
+                                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                    class="w-full border border-slate-200 rounded-xl p-3 bg-white
+                                           file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50
+                                           file:px-4 file:py-2 file:font-semibold file:text-indigo-700
+                                           hover:file:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 />
+                                <p class="text-xs text-slate-400 mt-2">
+                                    Pilih foto maksimal 2 MB. Preview berubah setelah file dipilih.
+                                </p>
                             </div>
 
                             {{-- DATA --}}
                             <div class="space-y-4">
                                 <div>
-                                    <label class="font-medium"> Nama </label>
+                                    <label for="aboutNewTeamName" class="font-medium"> Nama </label>
 
                                     <input
                                         type="text"
+                                        id="aboutNewTeamName"
                                         name="name"
+                                        autocomplete="off"
                                         required
                                         class="w-full mt-2 border rounded-xl p-3"
                                         placeholder="Nama anggota"
@@ -683,10 +729,11 @@
                                 </div>
 
                                 <div>
-                                    <label class="font-medium"> Jabatan </label>
+                                    <label for="aboutNewTeamPosition" class="font-medium"> Jabatan </label>
 
                                     <input
                                         type="text"
+                                        id="aboutNewTeamPosition"
                                         name="position"
                                         required
                                         class="w-full mt-2 border rounded-xl p-3"
@@ -695,11 +742,12 @@
                                 </div>
 
                                 <div>
-                                    <label class="font-medium">
+                                    <label for="aboutNewTeamDescription" class="font-medium">
                                         Deskripsi
                                     </label>
 
                                     <textarea
+                                        id="aboutNewTeamDescription"
                                         name="description"
                                         rows="5"
                                         class="w-full mt-2 border rounded-xl p-3 resize-none"
@@ -736,10 +784,12 @@
                                                 class="flex-none self-start w-[300px] border border-slate-200 rounded-2xl bg-slate-50 overflow-hidden snap-start">
                                                 {{-- FOTO --}}
                                                 <div class="relative">
-                                                    <div class="h-[360px] bg-white flex items-center justify-center">
+                                                    <div id="teamPhotoPreviewContainer-{{ $team->id }}"
+                                                        class="h-[360px] bg-white flex items-center justify-center">
                                                         @if ($team->photo)
                                                             <img id="teamMainPhoto-{{ $team->id }}"
-                                                                src="{{ $team->photo }}" alt="{{ $team->name }}"
+                                                                src="{{ asset('storage/' . $team->photo) }}"
+                                                                alt="{{ $team->name }}"
                                                                 class="w-full h-full object-cover" />
                                                         @else
                                                             <span class="text-slate-400">
@@ -762,53 +812,67 @@
                                                     class="hidden border-t border-slate-200 p-5">
                                                     <form
                                                         action="{{ route('dashboard.about.team.update', $team->id) }}"
-                                                        method="POST" class="about-bulk-update-form">
+                                                        method="POST" enctype="multipart/form-data"
+                                                        class="about-bulk-update-form">
                                                         @csrf
                                                         @method ('PUT')
 
-                                                        {{-- URL FOTO + PREVIEW --}}
+                                                        {{-- UPLOAD FOTO + PREVIEW --}}
                                                         <div>
-                                                            <label class="font-medium">
-                                                                URL Foto
+                                                            <label for="teamPhotoInput-{{ $team->id }}"
+                                                                class="block font-medium mb-2">
+                                                                Upload Foto (JPG/PNG/WebP, maks 2MB)
                                                             </label>
 
-                                                            <input type="url"
+                                                            <input type="file"
                                                                 id="teamPhotoInput-{{ $team->id }}"
-                                                                name="photo" value="{{ $team->photo }}"
-                                                                class="w-full mt-2 border rounded-xl p-3"
-                                                                placeholder="https://..."
-                                                                oninput="previewTeamPhoto({{ $team->id }})" />
+                                                                name="photo"
+                                                                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                                                class="w-full border border-slate-200 rounded-xl p-3 bg-white
+                                                                       file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50
+                                                                       file:px-4 file:py-2 file:font-semibold file:text-indigo-700
+                                                                       hover:file:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                                onchange="previewTeamPhoto({{ $team->id }})" />
+                                                            <p class="text-xs text-slate-400 mt-2">
+                                                                Pilih foto maksimal 2 MB. Preview berubah setelah file
+                                                                dipilih.
+                                                            </p>
                                                         </div>
 
                                                         {{-- NAMA --}}
                                                         <div class="mt-4">
-                                                            <label class="font-medium">
+                                                            <label for="aboutTeamName-{{ $team->id }}"
+                                                                class="font-medium">
                                                                 Nama
                                                             </label>
 
-                                                            <input type="text" name="name"
-                                                                value="{{ $team->name }}" required
-                                                                class="w-full mt-2 border rounded-xl p-3" />
+                                                            <input type="text"
+                                                                id="aboutTeamName-{{ $team->id }}" name="name"
+                                                                value="{{ $team->name }}" autocomplete="off"
+                                                                required class="w-full mt-2 border rounded-xl p-3" />
                                                         </div>
 
                                                         {{-- JABATAN --}}
                                                         <div class="mt-4">
-                                                            <label class="font-medium">
+                                                            <label for="aboutTeamPosition-{{ $team->id }}"
+                                                                class="font-medium">
                                                                 Jabatan
                                                             </label>
 
-                                                            <input type="text" name="position"
-                                                                value="{{ $team->position }}" required
-                                                                class="w-full mt-2 border rounded-xl p-3" />
+                                                            <input type="text"
+                                                                id="aboutTeamPosition-{{ $team->id }}"
+                                                                name="position" value="{{ $team->position }}"
+                                                                required class="w-full mt-2 border rounded-xl p-3" />
                                                         </div>
 
                                                         {{-- DESKRIPSI --}}
                                                         <div class="mt-4">
-                                                            <label class="font-medium">
+                                                            <label for="aboutTeamDescription-{{ $team->id }}"
+                                                                class="font-medium">
                                                                 Deskripsi
                                                             </label>
 
-                                                            <textarea name="description" rows="4"
+                                                            <textarea id="aboutTeamDescription-{{ $team->id }}" name="description" rows="4"
                                                                 class="w-full mt-2 border rounded-xl p-3 resize-none">{{ $team->description }}</textarea>
                                                         </div>
 
@@ -850,51 +914,41 @@
                                 const founderPreview =
                                     document.getElementById("founderPreview");
 
-                                // HERO PREVIEW
+                                // PREVIEW UPLOAD FOTO HERO
                                 function loadHeroPreview() {
                                     if (!heroInput || !heroPreview) return;
+                                    const file = heroInput.files && heroInput.files[0];
+                                    if (!file) return; // Pertahankan preview foto yang sudah tersimpan.
 
-                                    const url = heroInput.value.trim();
-
-                                    if (!url) {
-                                        heroPreview.innerHTML = `<span class="text-slate-400">Preview Gambar</span>`;
-                                        return;
-                                    }
-
+                                    const objectUrl = URL.createObjectURL(file);
                                     heroPreview.innerHTML =
-                                        `<img src="${url}"
-                                            class="w-full h-full object-contain rounded-xl bg-white"
-                                            onerror="this.parentElement.innerHTML='<span class=&quot;text-red-500&quot;>URL gambar tidak valid</span>'">`;
+                                        `<img src="${objectUrl}"
+                                        class="w-full h-full object-contain rounded-xl bg-white" alt="Preview Background Hero">`;
                                 }
 
-                                // FOUNDER PREVIEW
+                                // PREVIEW UPLOAD FOTO PENDIRI
                                 function loadFounderPreview() {
                                     if (!founderInput || !founderPreview) return;
+                                    const file = founderInput.files && founderInput.files[0];
+                                    if (!file) return; // Pertahankan preview foto yang sudah tersimpan.
 
-                                    const url = founderInput.value.trim();
-
-                                    if (!url) {
-                                        founderPreview.innerHTML = `<span class="text-slate-400">Preview Foto</span>`;
-                                        return;
-                                    }
-
-                                    founderPreview.innerHTML =
-                                        `<img src="${url}"
-                                            class="w-full h-full object-cover rounded-xl"
-                                            onerror="this.parentElement.innerHTML='<span class=&quot;text-red-500&quot;>URL gambar tidak valid</span>'">`;
+                                    const objectUrl = URL.createObjectURL(file);
+                                    founderPreview.innerHTML = `<img src="${objectUrl}"
+                                        class="w-full h-full object-cover rounded-xl" alt="Preview Foto Pendiri">`;
                                 }
 
-                                heroInput?.addEventListener("input", loadHeroPreview);
                                 heroInput?.addEventListener("change", loadHeroPreview);
-                                founderInput?.addEventListener("input", loadFounderPreview);
-                                founderInput?.addEventListener(
-                                    "change",
-                                    loadFounderPreview,
-                                );
+                                founderInput?.addEventListener("change", loadFounderPreview);
 
-                                window.addEventListener("DOMContentLoaded", function() {
-                                    loadHeroPreview();
-                                    loadFounderPreview();
+                                // PREVIEW UPLOAD FOTO TIM BARU
+                                const newTeamPhotoInput = document.getElementById("newTeamPhoto");
+                                const newTeamPreview = document.getElementById("newTeamPreview");
+                                newTeamPhotoInput?.addEventListener("change", function() {
+                                    const file = this.files && this.files[0];
+                                    if (!file || !newTeamPreview) return;
+                                    const objectUrl = URL.createObjectURL(file);
+                                    newTeamPreview.innerHTML = `<img src="${objectUrl}"
+                                        class="w-full h-full object-cover" alt="Preview Foto Tim">`;
                                 });
 
                                 // TIMELINE TOGGLE
@@ -937,32 +991,24 @@
                                     }
                                 }
 
-                                // TEAM PHOTO PREVIEW
+                                // PREVIEW UPLOAD FOTO TIM YANG DIEDIT
                                 function previewTeamPhoto(id) {
-                                    const input = document.getElementById(
-                                        "teamPhotoInput-" + id,
+                                    const input = document.getElementById("teamPhotoInput-" + id);
+                                    const previewContainer = document.getElementById(
+                                        "teamPhotoPreviewContainer-" + id
                                     );
-                                    const mainImage = document.getElementById(
-                                        "teamMainPhoto-" + id,
-                                    );
+                                    if (!input || !previewContainer) return;
 
-                                    if (!input || !mainImage) return;
+                                    const file = input.files && input.files[0];
+                                    if (!file) return;
 
-                                    const url = input.value.trim();
-
-                                    if (!url) return;
-
-                                    const testImage = new Image();
-
-                                    testImage.onload = function() {
-                                        mainImage.src = url;
-                                    };
-
-                                    testImage.onerror = function() {
-                                        console.log("URL gambar tidak valid");
-                                    };
-
-                                    testImage.src = url;
+                                    const objectUrl = URL.createObjectURL(file);
+                                    previewContainer.innerHTML = `<img
+                                        id="teamMainPhoto-${id}"
+                                        src="${objectUrl}"
+                                        alt="Preview Foto Tim"
+                                        class="w-full h-full object-cover"
+                                    >`;
                                 }
                             </script>
 

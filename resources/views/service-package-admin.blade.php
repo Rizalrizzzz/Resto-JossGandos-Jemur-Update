@@ -9,7 +9,7 @@
 
     <link rel="icon" type="image/png" href="{{ asset('img/logojossgandos.png') }}">
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css" />
 
@@ -375,14 +375,30 @@
                             <tbody id="packageTable" class="divide-y divide-slate-100">
                                 @forelse ($packages as $package)
                                     @php
-                                        $imagePath = $package->image_path ?? '';
+                                        // Gambar paket hanya boleh berasal dari penyimpanan lokal.
+                                        $imagePath = trim((string) ($package->image_path ?? ''));
+                                        $imageUrl = '';
 
-                                        if (\Illuminate\Support\Str::startsWith($imagePath, ['http://', 'https://'])) {
-                                            $imageUrl = $imagePath;
-                                        } elseif (\Illuminate\Support\Str::startsWith($imagePath, 'storage/')) {
-                                            $imageUrl = asset($imagePath);
-                                        } else {
-                                            $imageUrl = asset('storage/' . $imagePath);
+                                        $isExternalImagePath =
+                                            preg_match('/^(?:https?:)?\/\//i', $imagePath) ||
+                                            preg_match('/^(?:data|blob):/i', $imagePath);
+
+                                        if ($imagePath !== '' && !$isExternalImagePath) {
+                                            $localImagePath = ltrim($imagePath, '/');
+
+                                            if (
+                                                \Illuminate\Support\Str::startsWith($localImagePath, 'public/storage/')
+                                            ) {
+                                                $localImagePath = substr($localImagePath, 7);
+                                            } elseif (\Illuminate\Support\Str::startsWith($localImagePath, 'public/')) {
+                                                $localImagePath = 'storage/' . substr($localImagePath, 7);
+                                            }
+
+                                            if (\Illuminate\Support\Str::startsWith($localImagePath, 'storage/')) {
+                                                $imageUrl = asset($localImagePath);
+                                            } else {
+                                                $imageUrl = asset('storage/' . $localImagePath);
+                                            }
                                         }
 
                                         $categoryLabel = [
@@ -401,7 +417,7 @@
                                         <td class="px-3 py-4 align-middle">
                                             <div
                                                 class="w-16 poster-preview rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
-                                                @if ($package->image_path)
+                                                @if ($imageUrl)
                                                     <img src="{{ $imageUrl }}" alt="{{ $package->title }}"
                                                         class="w-full h-full object-cover"
                                                         onerror="
@@ -578,7 +594,7 @@
                 <div class="p-6 space-y-6">
                     {{-- ================= KATEGORI ================= --}}
                     <div>
-                        <label class="block text-sm font-medium mb-2">
+                        <label for="addCategory" class="block text-sm font-medium mb-2">
                             Kategori
                         </label>
 
@@ -620,9 +636,9 @@
                     <div id="addPackageDetails" class="hidden space-y-6">
                         {{-- ================= GAMBAR ================= --}}
                         <div>
-                            <label class="block text-sm font-medium mb-3">
+                            <p class="block text-sm font-medium mb-3">
                                 Gambar Paket
-                            </label>
+                            </p>
 
                             <div class="grid grid-cols-1 sm:grid-cols-[220px_1fr] gap-7 items-start">
                                 {{-- PREVIEW POSTER --}}
@@ -637,62 +653,40 @@
                                         class="hidden w-full h-full object-cover" />
                                 </div>
 
-                                {{-- SUMBER GAMBAR --}}
-                                <div class="space-y-4">
-                                    {{-- UPLOAD FILE --}}
-                                    <div>
-                                        <label class="block text-sm font-medium mb-2">
-                                            Upload
-                                            File
-                                        </label>
+                                {{-- UPLOAD GAMBAR --}}
+                                <div>
+                                    <label for="addImageFile" class="block text-sm font-medium mb-2">
+                                        Upload Foto (JPG/PNG/WebP, maks 2MB)
+                                    </label>
 
-                                        <input type="file" name="image_file" id="addImageFile" accept="image/*"
-                                            onchange="
-                                                                                handleAddFile()
-                                                                            "
-                                            class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium" />
-                                    </div>
+                                    <input type="file" name="image_file" id="addImageFile"
+                                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required
+                                        onchange="handleAddFile()"
+                                        class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium" />
 
-                                    {{-- ATAU URL --}}
-                                    <div>
-                                        <label class="block text-sm font-medium mb-2">
-                                            Atau
-                                            Gunakan
-                                            URL
-                                        </label>
-
-                                        <input type="url" name="image_url" id="addImageUrl"
-                                            oninput="
-                                                                                handleAddUrl()
-                                                                            "
-                                            placeholder="https://contoh.com/poster.jpg"
-                                            class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
-
-                                        <p id="addImageMessage" class="hidden mt-2 text-xs text-red-500">Pilih salah
-                                            satu: upload file atau gunakan URL gambar.</p>
-
-                                        <p id="addImageSizeMessage" class="hidden mt-2 text-xs text-red-500">
-                                            Ukuran file lebih dari 1 MB. Harap kompres gambar terlebih dahulu hingga
-                                            maksimal 1 MB.
-                                        </p>
-                                    </div>
+                                    <p class="field-note">Pilih foto maksimal 2 MB. Preview berubah setelah file
+                                        dipilih.</p>
+                                    <p id="addImageSizeMessage" class="hidden mt-2 text-xs text-red-500">
+                                        Ukuran file lebih dari 2 MB. Pilih foto maksimal 2 MB.
+                                    </p>
                                 </div>
                             </div>
                         </div>
 
                         {{-- ================= NAMA ================= --}}
                         <div>
-                            <label class="block text-sm font-medium mb-2">
+                            <label for="addTitle" class="block text-sm font-medium mb-2">
                                 Nama Paket
                             </label>
 
-                            <input type="text" name="title" required placeholder="Contoh: Package Menu"
+                            <input type="text" id="addTitle" name="title" required
+                                placeholder="Contoh: Package Menu"
                                 class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
                         </div>
 
                         {{-- ================= HARGA ================= --}}
                         <div id="addPriceField">
-                            <label class="block text-sm font-medium mb-2">
+                            <label for="addPrice" class="block text-sm font-medium mb-2">
                                 Harga
                             </label>
 
@@ -705,7 +699,7 @@
 
                         {{-- ================= KAPASITAS / MINIMAL PEMESANAN ================= --}}
                         <div id="addCapacityField">
-                            <label id="addCapacityLabel" class="block text-sm font-medium mb-2">
+                            <label id="addCapacityLabel" for="addCapacity" class="block text-sm font-medium mb-2">
                                 Kapasitas
                             </label>
 
@@ -715,22 +709,22 @@
 
                         {{-- ================= DESKRIPSI ================= --}}
                         <div>
-                            <label class="block text-sm font-medium mb-2">
+                            <label for="addDescription" class="block text-sm font-medium mb-2">
                                 Deskripsi
                             </label>
 
-                            <textarea name="description" rows="4" placeholder="Masukkan deskripsi paket..."
+                            <textarea id="addDescription" name="description" rows="4" placeholder="Masukkan deskripsi paket..."
                                 class="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none resize-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"></textarea>
                         </div>
 
                         {{-- ================= STATUS + URUTAN ================= --}}
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium mb-2">
+                                <label for="addActive" class="block text-sm font-medium mb-2">
                                     Status
                                 </label>
 
-                                <select name="is_active"
+                                <select id="addActive" name="is_active"
                                     class="w-full h-11 px-4 border border-slate-200 rounded-xl bg-white">
                                     <option value="1">
                                         Aktif
@@ -743,11 +737,12 @@
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium mb-2">
+                                <label for="addSort" class="block text-sm font-medium mb-2">
                                     Urutan
                                 </label>
 
-                                <input type="number" name="sort_order" value="0" min="0"
+                                <input type="number" id="addSort" name="sort_order" value="0"
+                                    min="0"
                                     class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none focus:border-indigo-500" />
                             </div>
                         </div>
@@ -803,7 +798,7 @@
                 <div class="p-6 space-y-6">
                     {{-- KATEGORI --}}
                     <div>
-                        <label class="block text-sm font-medium mb-2">
+                        <label for="updateCategory" class="block text-sm font-medium mb-2">
                             Kategori
                         </label>
 
@@ -838,9 +833,9 @@
                     </div>
                     {{-- ================= GAMBAR ================= --}}
                     <div>
-                        <label class="block text-sm font-medium mb-3">
+                        <p class="block text-sm font-medium mb-3">
                             Gambar Paket
-                        </label>
+                        </p>
 
                         <div class="grid grid-cols-1 sm:grid-cols-[220px_1fr] gap-7 items-start">
                             {{-- PREVIEW --}}
@@ -855,51 +850,29 @@
                                     class="w-full h-full object-cover" />
                             </div>
 
-                            {{-- SUMBER --}}
-                            <div class="space-y-4">
-                                {{-- FILE --}}
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">
-                                        Ganti
-                                        File
-                                    </label>
+                            {{-- UPLOAD GAMBAR --}}
+                            <div>
+                                <label for="updateImageFile" class="block text-sm font-medium mb-2">
+                                    Upload Foto (JPG/PNG/WebP, maks 2MB)
+                                </label>
 
-                                    <input type="file" name="image_file" id="updateImageFile" accept="image/*"
-                                        onchange="
-                                                                            handleUpdateFile()
-                                                                        "
-                                        class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium" />
+                                <input type="file" name="image_file" id="updateImageFile"
+                                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                    onchange="handleUpdateFile()"
+                                    class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium" />
 
-                                    <p id="updateImageSizeMessage" class="hidden mt-2 text-xs text-red-500">Ukuran
-                                        file lebih dari 1 MB. Harap kompres gambar terlebih dahulu hingga maksimal 1 MB.
-                                    </p>
-                                </div>
-
-                                {{-- URL --}}
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">
-                                        Atau
-                                        Gunakan
-                                        URL
-                                    </label>
-
-                                    <input type="url" name="image_url" id="updateImageUrl"
-                                        oninput="
-                                                                            handleUpdateUrl()
-                                                                        "
-                                        placeholder="https://contoh.com/poster.jpg"
-                                        class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
-
-                                    <p id="updateImageMessage" class="hidden mt-2 text-xs text-red-500">Pilih salah
-                                        satu: upload file atau gunakan URL gambar.</p>
-                                </div>
+                                <p class="field-note">Pilih foto maksimal 2 MB. Preview berubah setelah file dipilih.
+                                </p>
+                                <p id="updateImageSizeMessage" class="hidden mt-2 text-xs text-red-500">
+                                    Ukuran file lebih dari 2 MB. Pilih foto maksimal 2 MB.
+                                </p>
                             </div>
                         </div>
                     </div>
 
                     {{-- NAMA --}}
                     <div>
-                        <label class="block text-sm font-medium mb-2">
+                        <label for="updateTitle" class="block text-sm font-medium mb-2">
                             Nama Paket
                         </label>
 
@@ -909,7 +882,7 @@
 
                     {{-- ================= HARGA ================= --}}
                     <div id="updatePriceField">
-                        <label class="block text-sm font-medium mb-2">
+                        <label for="updatePrice" class="block text-sm font-medium mb-2">
                             Harga
                         </label>
 
@@ -921,7 +894,7 @@
 
                     {{-- KAPASITAS / MINIMAL PEMESANAN --}}
                     <div id="updateCapacityField">
-                        <label id="updateCapacityLabel" class="block text-sm font-medium mb-2">
+                        <label id="updateCapacityLabel" for="updateCapacity" class="block text-sm font-medium mb-2">
                             Kapasitas
                         </label>
 
@@ -931,7 +904,7 @@
 
                     {{-- DESKRIPSI --}}
                     <div>
-                        <label class="block text-sm font-medium mb-2">
+                        <label for="updateDescription" class="block text-sm font-medium mb-2">
                             Deskripsi
                         </label>
 
@@ -942,7 +915,7 @@
                     {{-- STATUS + URUTAN --}}
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium mb-2">
+                            <label for="updateActive" class="block text-sm font-medium mb-2">
                                 Status
                             </label>
 
@@ -959,7 +932,7 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium mb-2">
+                            <label for="updateSort" class="block text-sm font-medium mb-2">
                                 Urutan
                             </label>
 
@@ -1129,10 +1102,6 @@
                 document.getElementById(
                     "addImageFile",
                 );
-            const urlInput =
-                document.getElementById(
-                    "addImageUrl",
-                );
             const titleInput =
                 document.querySelector(
                     '#addModal input[name="title"]',
@@ -1161,10 +1130,6 @@
             if (fileInput) {
                 fileInput.value = "";
                 fileInput.disabled = false;
-            }
-            if (urlInput) {
-                urlInput.value = "";
-                urlInput.disabled = false;
             }
             if (titleInput)
                 titleInput.value = "";
@@ -1277,138 +1242,34 @@
                 ====================================================== */
 
         function handleAddFile() {
-            const fileInput =
-                document.getElementById(
-                    "addImageFile",
-                );
-            const urlInput =
-                document.getElementById(
-                    "addImageUrl",
-                );
-            const message =
-                document.getElementById(
-                    "addImageMessage",
-                );
-            const sizeMessage =
-                document.getElementById(
-                    "addImageSizeMessage",
-                );
-            const image =
-                document.getElementById(
-                    "addPreviewImage",
-                );
-            const text =
-                document.getElementById(
-                    "addPreviewText",
-                );
+            const fileInput = document.getElementById("addImageFile");
+            const message = document.getElementById("addImageSizeMessage");
+            const image = document.getElementById("addPreviewImage");
+            const text = document.getElementById("addPreviewText");
 
             const file = fileInput.files[0];
+            if (!file) return;
 
-            if (!file) {
-                return;
-            }
-
-            // Maksimal 1 MB.
-            if (file.size > 1024 * 1024) {
+            // Maksimal ukuran foto 2 MB.
+            if (file.size > 2 * 1024 * 1024) {
                 fileInput.value = "";
-                urlInput.disabled = false;
-
-                sizeMessage.classList.remove(
-                    "hidden",
-                );
-                message.classList.add("hidden");
-
+                message.textContent = "Ukuran file lebih dari 2 MB. Pilih foto maksimal 2 MB.";
+                message.classList.remove("hidden");
                 image.src = "";
                 image.classList.add("hidden");
                 text.classList.remove("hidden");
-
                 return;
             }
 
-            sizeMessage.classList.add("hidden");
-
-            // File dipilih -> URL dikosongkan.
-            urlInput.value = "";
-            urlInput.disabled = true;
             message.classList.add("hidden");
 
             const reader = new FileReader();
-
             reader.onload = function(event) {
                 image.src = event.target.result;
-                image.classList.remove(
-                    "hidden",
-                );
+                image.classList.remove("hidden");
                 text.classList.add("hidden");
             };
-
             reader.readAsDataURL(file);
-        }
-
-        function handleAddUrl() {
-            const fileInput =
-                document.getElementById(
-                    "addImageFile",
-                );
-
-            const urlInput =
-                document.getElementById(
-                    "addImageUrl",
-                );
-
-            const message =
-                document.getElementById(
-                    "addImageMessage",
-                );
-
-            const image =
-                document.getElementById(
-                    "addPreviewImage",
-                );
-
-            const text =
-                document.getElementById(
-                    "addPreviewText",
-                );
-
-            const url = urlInput.value.trim();
-
-            if (!url) {
-                fileInput.disabled = false;
-
-                message.classList.add("hidden");
-
-                image.classList.add("hidden");
-
-                text.classList.remove("hidden");
-
-                image.src = "";
-
-                return;
-            }
-
-            // URL dipilih → file dikosongkan
-            fileInput.value = "";
-
-            fileInput.disabled = true;
-
-            message.classList.add("hidden");
-
-            image.onload = function() {
-                image.classList.remove(
-                    "hidden",
-                );
-
-                text.classList.add("hidden");
-            };
-
-            image.onerror = function() {
-                image.classList.add("hidden");
-
-                text.classList.remove("hidden");
-            };
-
-            image.src = url;
         }
 
         /* =====================================================
@@ -1429,11 +1290,6 @@
             const imageFile =
                 document.getElementById(
                     "updateImageFile",
-                );
-
-            const imageUrl =
-                document.getElementById(
-                    "updateImageUrl",
                 );
 
             const previewImage =
@@ -1489,50 +1345,31 @@
 
             imageFile.disabled = false;
 
-            imageUrl.value = "";
-
-            imageUrl.disabled = false;
-
             /*
                     |------------------------------------------------------
                     | GAMBAR LAMA
                     |------------------------------------------------------
                     */
 
-            if (packageData.image_path) {
-                const imagePath =
-                    packageData.image_path;
+            const rawImagePath = String(packageData.image_path ?? "").trim();
+            const isExternalImagePath = /^(?:https?:)?\/\//i.test(rawImagePath) ||
+                /^(?:data|blob):/i.test(rawImagePath);
 
-                if (
-                    imagePath.startsWith(
-                        "http://",
-                    ) ||
-                    imagePath.startsWith(
-                        "https://",
-                    )
-                ) {
-                    // Gambar dari URL
-                    imageUrl.value = imagePath;
-                    previewImage.src =
-                        imagePath;
-                } else if (
-                    imagePath.startsWith(
-                        "storage/",
-                    )
-                ) {
-                    // Data lama yang sudah menyimpan "storage/"
-                    previewImage.src = `/${imagePath}`;
-                } else {
-                    // Data baru: service-packages/namafile.jpg
-                    previewImage.src = `/storage/${imagePath}`;
+            // Tolak URL gambar eksternal dan hanya bentuk URL untuk file lokal.
+            if (rawImagePath && !isExternalImagePath) {
+                let imagePath = rawImagePath.replace(/^\/+/, "");
+
+                if (imagePath.startsWith("public/storage/")) {
+                    imagePath = imagePath.slice("public/".length);
+                } else if (imagePath.startsWith("public/")) {
+                    imagePath = `storage/${imagePath.slice("public/".length)}`;
+                } else if (!imagePath.startsWith("storage/")) {
+                    imagePath = `storage/${imagePath}`;
                 }
 
-                previewImage.classList.remove(
-                    "hidden",
-                );
-                previewText.classList.add(
-                    "hidden",
-                );
+                previewImage.src = `/${imagePath}`;
+                previewImage.classList.remove("hidden");
+                previewText.classList.add("hidden");
             } else {
                 previewImage.src = "";
 
@@ -1568,112 +1405,60 @@
                 ====================================================== */
 
         function handleUpdateFile() {
-            const fileInput =
-                document.getElementById(
-                    "updateImageFile",
-                );
-            const imageUrl =
-                document.getElementById(
-                    "updateImageUrl",
-                );
-            const image =
-                document.getElementById(
-                    "updatePreviewImage",
-                );
-            const text =
-                document.getElementById(
-                    "updatePreviewText",
-                );
-            const sizeMessage =
-                document.getElementById(
-                    "updateImageSizeMessage",
-                );
+            const fileInput = document.getElementById("updateImageFile");
+            const image = document.getElementById("updatePreviewImage");
+            const text = document.getElementById("updatePreviewText");
+            const sizeMessage = document.getElementById("updateImageSizeMessage");
 
             const file = fileInput.files[0];
+            if (!file) return;
 
-            if (!file) {
-                return;
-            }
-
-            // Maksimal 1 MB.
-            if (file.size > 1024 * 1024) {
+            // Maksimal ukuran foto 2 MB.
+            if (file.size > 2 * 1024 * 1024) {
                 fileInput.value = "";
-                imageUrl.disabled = false;
-
-                sizeMessage.classList.remove(
-                    "hidden",
-                );
-
+                sizeMessage.textContent = "Ukuran file lebih dari 2 MB. Pilih foto maksimal 2 MB.";
+                sizeMessage.classList.remove("hidden");
                 return;
             }
 
             sizeMessage.classList.add("hidden");
 
-            // File baru dipilih -> URL dikosongkan.
-            imageUrl.value = "";
-            imageUrl.disabled = true;
-
             const reader = new FileReader();
-
             reader.onload = function(event) {
                 image.src = event.target.result;
-                image.classList.remove(
-                    "hidden",
-                );
+                image.classList.remove("hidden");
                 text.classList.add("hidden");
             };
-
             reader.readAsDataURL(file);
         }
 
-        function handleUpdateUrl() {
-            const fileInput =
-                document.getElementById(
-                    "updateImageFile",
-                );
 
-            const urlInput =
-                document.getElementById(
-                    "updateImageUrl",
-                );
+        /* =====================================================
+           PERTAHANKAN FILTER KATEGORI SETELAH EDIT PAKET
+        ====================================================== */
 
-            const image =
-                document.getElementById(
-                    "updatePreviewImage",
-                );
+        const packageCategoryFilter = document.getElementById("categoryFilter");
+        const packageUpdateForm = document.getElementById("updateForm");
 
-            const text =
-                document.getElementById(
-                    "updatePreviewText",
-                );
+        // Pulihkan kategori yang terakhir dipilih setelah halaman dimuat ulang.
+        const savedPackageCategory = sessionStorage.getItem("packageCategoryAfterEdit");
 
-            const url = urlInput.value.trim();
+        if (packageCategoryFilter && savedPackageCategory) {
+            packageCategoryFilter.value = savedPackageCategory;
+            sessionStorage.removeItem("packageCategoryAfterEdit");
+            filterPackages();
+        }
 
-            if (!url) {
-                fileInput.disabled = false;
-
-                return;
-            }
-
-            fileInput.value = "";
-
-            fileInput.disabled = true;
-
-            image.onload = function() {
-                image.classList.remove(
-                    "hidden",
-                );
-
-                text.classList.add("hidden");
-            };
-
-            image.onerror = function() {
-                image.classList.add("hidden");
-
-                text.classList.remove("hidden");
-            };
-
-            image.src = url;
+        // Simpan kategori aktif saat form edit paket dikirim.
+        if (packageUpdateForm) {
+            packageUpdateForm.addEventListener("submit", function() {
+                if (packageCategoryFilter) {
+                    sessionStorage.setItem(
+                        "packageCategoryAfterEdit",
+                        packageCategoryFilter.value
+                    );
+                }
+            });
         }
     </script>
 

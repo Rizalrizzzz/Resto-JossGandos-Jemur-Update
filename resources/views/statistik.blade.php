@@ -9,9 +9,7 @@
 
     <link rel="icon" type="image/png" href="{{ asset('img/logojossgandos.png') }}" />
 
-    @vite (['resources/css/app.css', 'resources/js/app.js'])
-
-    <script src="https://cdn.tailwindcss.com"></script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css" />
 
@@ -86,6 +84,46 @@
             transition:
                 opacity 0.45s ease,
                 transform 0.45s ease;
+        }
+
+        /* Animasi ikon pada kartu statistik */
+        @keyframes statIconRotate {
+            0% {
+                opacity: 0;
+                transform: rotate(-180deg) scale(0.65);
+            }
+
+            70% {
+                opacity: 1;
+                transform: rotate(12deg) scale(1.08);
+            }
+
+            100% {
+                opacity: 1;
+                transform: rotate(0deg) scale(1);
+            }
+        }
+
+        .stat-icon-animated {
+            display: inline-block;
+            animation: statIconRotate 850ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        /* Garis halaman terpopuler diisi dari kiri ke kanan */
+        .page-bar-fill {
+            width: 0%;
+            transition: width 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+            will-change: width;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .stat-icon-animated {
+                animation: none !important;
+            }
+
+            .page-bar-fill {
+                transition: none !important;
+            }
         }
     </style>
 </head>
@@ -441,8 +479,9 @@
 
                                                 {{-- BAR --}}
                                                 <div class="mt-2 h-2.5 bg-[#e9eef5] rounded-full overflow-hidden">
-                                                    <div class="h-full rounded-full bg-gradient-to-r from-[#3157f5] to-[#8d43ed]"
-                                                        style="width: {{ $barWidth }}%;"></div>
+                                                    <div class="page-bar-fill h-full rounded-full bg-gradient-to-r from-[#3157f5] to-[#8d43ed]"
+                                                        data-target-width="{{ number_format($barWidth, 2, '.', '') }}"
+                                                        style="width: 0%;"></div>
                                                 </div>
                                             </div>
                                         </div>
@@ -483,6 +522,143 @@
     </script>
 
     {{-- =========================================================
+        ANIMASI ANGKA, IKON, DAN BAR HALAMAN TERPOPULER
+    ========================================================== --}}
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const reduceMotion = window.matchMedia(
+                "(prefers-reduced-motion: reduce)"
+            ).matches;
+
+            // ======================================
+            // 1. ANIMASI ANGKA KARTU STATISTIK
+            // ======================================
+            function parseDisplayedNumber(text) {
+                const match = text.match(/-?\d[\d.,]*/);
+
+                if (!match) return null;
+
+                const raw = match[0];
+                const dotIndex = raw.lastIndexOf(".");
+                const commaIndex = raw.lastIndexOf(",");
+                let decimalSeparator = null;
+                let normalized = raw;
+                let decimals = 0;
+
+                if (dotIndex !== -1 && commaIndex !== -1) {
+                    decimalSeparator = dotIndex > commaIndex ? "." : ",";
+                    const groupSeparator = decimalSeparator === "." ? "," : ".";
+                    const decimalPart = raw.split(decimalSeparator).pop();
+                    decimals = decimalPart.length;
+                    normalized = raw.split(groupSeparator).join("")
+                        .replace(decimalSeparator, ".");
+                } else if (dotIndex !== -1 || commaIndex !== -1) {
+                    const separator = dotIndex !== -1 ? "." : ",";
+                    const parts = raw.split(separator);
+                    const lastPart = parts[parts.length - 1];
+
+                    // Format Indonesia: 19.643 dianggap 19.643 (sembilan belas ribu),
+                    // sedangkan 12,5 dianggap angka desimal.
+                    if (parts.length === 2 && lastPart.length === 3) {
+                        normalized = parts.join("");
+                    } else if (lastPart.length > 0 && lastPart.length <= 2) {
+                        decimalSeparator = separator;
+                        decimals = lastPart.length;
+                        normalized = parts.slice(0, -1).join("") + "." + lastPart;
+                    } else {
+                        normalized = parts.join("");
+                    }
+                }
+
+                const target = Number(normalized);
+                if (!Number.isFinite(target)) return null;
+
+                return {
+                    target,
+                    decimals,
+                    prefix: text.slice(0, match.index),
+                    suffix: text.slice(match.index + raw.length)
+                };
+            }
+
+            document.querySelectorAll(".stat-card").forEach((card, index) => {
+                const icon = card.querySelector(".glass-icon i");
+                const numberElement = card.querySelector("h2");
+
+                // Putar ikon satu kali dengan jeda antar kartu.
+                if (icon && !reduceMotion) {
+                    icon.style.animationDelay = `${index * 120}ms`;
+                    icon.classList.add("stat-icon-animated");
+                }
+
+                if (!numberElement || reduceMotion) return;
+
+                const originalText = numberElement.textContent.trim();
+                const parsed = parseDisplayedNumber(originalText);
+                if (!parsed) return;
+
+                const duration = 1600;
+                const startTime = performance.now() + index * 120;
+                const formatter = new Intl.NumberFormat("id-ID", {
+                    minimumFractionDigits: parsed.decimals,
+                    maximumFractionDigits: parsed.decimals
+                });
+
+                function animateNumber(now) {
+                    if (now < startTime) {
+                        requestAnimationFrame(animateNumber);
+                        return;
+                    }
+
+                    const progress = Math.min((now - startTime) / duration, 1);
+                    const eased = 1 - Math.pow(1 - progress, 4);
+                    const currentValue = parsed.target * eased;
+                    const displayValue = parsed.decimals > 0 ?
+                        Number(currentValue.toFixed(parsed.decimals)) :
+                        Math.floor(currentValue);
+
+                    numberElement.textContent =
+                        parsed.prefix + formatter.format(displayValue) + parsed.suffix;
+
+                    if (progress < 1) {
+                        requestAnimationFrame(animateNumber);
+                    } else {
+                        // Kembalikan teks persis seperti nilai asli dari Blade.
+                        numberElement.textContent = originalText;
+                    }
+                }
+
+                requestAnimationFrame(animateNumber);
+            });
+
+            // ======================================
+            // 2. ANIMASI BAR HALAMAN TERPOPULER
+            // ======================================
+            const pageBars = document.querySelectorAll(".page-bar-fill");
+
+            pageBars.forEach((bar, index) => {
+                const targetWidth = Math.min(
+                    100,
+                    Math.max(0, Number(bar.dataset.targetWidth) || 0)
+                );
+
+                if (reduceMotion) {
+                    bar.style.width = `${targetWidth}%`;
+                    return;
+                }
+
+                bar.style.transitionDelay = `${index * 120}ms`;
+
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        bar.style.width = `${targetWidth}%`;
+                    });
+                });
+            });
+        });
+    </script>
+
+    {{-- =========================================================
         CHART
     ========================================================== --}}
     @if (isset($monthlyLabels) && isset($monthlyData))
@@ -508,8 +684,49 @@
 
                 gradient.addColorStop(1, "rgba(124, 63, 236, 0.00)");
 
+                const reduceChartMotion = window.matchMedia(
+                    "(prefers-reduced-motion: reduce)"
+                ).matches;
+
+                // Memperlihatkan grafik dari kiri ke kanan tanpa mengubah data.
+                const lineRevealPlugin = {
+                    id: "lineReveal",
+
+                    beforeInit(chart) {
+                        chart.$lineRevealProgress = reduceChartMotion ? 1 : 0;
+                    },
+
+                    beforeDatasetsDraw(chart) {
+                        if (reduceChartMotion || !chart.chartArea) return;
+
+                        const {
+                            left,
+                            top,
+                            right,
+                            bottom
+                        } = chart.chartArea;
+                        const progress = chart.$lineRevealProgress ?? 0;
+                        const revealWidth = (right - left) * progress;
+
+                        chart.ctx.save();
+                        chart.ctx.beginPath();
+                        chart.ctx.rect(left, top, revealWidth, bottom - top);
+                        chart.ctx.clip();
+                        chart.$lineRevealClipSaved = true;
+                    },
+
+                    afterDatasetsDraw(chart) {
+                        if (chart.$lineRevealClipSaved) {
+                            chart.ctx.restore();
+                            chart.$lineRevealClipSaved = false;
+                        }
+                    }
+                };
+
                 new Chart(ctx, {
                     type: "line",
+
+                    plugins: [lineRevealPlugin],
 
                     data: {
                         labels: monthlyLabels,
@@ -530,14 +747,13 @@
                             fill: true,
 
                             pointRadius: 4,
-
-                            pointHoverRadius: 6,
-
+                            pointHoverRadius: 4,
                             pointBackgroundColor: "#ffffff",
-
+                            pointHoverBackgroundColor: "#ffffff",
                             pointBorderColor: "#425AF4",
-
+                            pointHoverBorderColor: "#425AF4",
                             pointBorderWidth: 2,
+                            pointHoverBorderWidth: 2,
                         }, ],
                     },
 
@@ -545,6 +761,34 @@
                         responsive: true,
 
                         maintainAspectRatio: false,
+
+                        // Grafik hanya merespons animasi awal saat halaman dibuka.
+                        // Arahkan kursor ke grafik tidak memicu interaksi atau animasi lagi.
+                        events: [],
+
+                        transitions: {
+                            active: {
+                                animation: {
+                                    duration: 0
+                                }
+                            }
+                        },
+
+                        animation: reduceChartMotion ? false : {
+                            duration: 2200,
+                            easing: "easeOutQuart",
+
+                            onProgress(animation) {
+                                animation.chart.$lineRevealProgress = animation.numSteps > 0 ?
+                                    animation.currentStep / animation.numSteps :
+                                    1;
+                            },
+
+                            onComplete(animation) {
+                                animation.chart.$lineRevealProgress = 1;
+                                animation.chart.draw();
+                            }
+                        },
 
                         interaction: {
                             intersect: false,

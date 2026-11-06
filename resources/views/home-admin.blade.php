@@ -20,8 +20,6 @@
 
     @vite (['resources/css/app.css', 'resources/js/app.js'])
 
-    <script src="https://cdn.tailwindcss.com"></script>
-
     <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css" />
 </head>
 
@@ -39,29 +37,31 @@
             {{-- =====================================================
                  HEADER HALAMAN
             ====================================================== --}}
-            <header class="flex-shrink-0 bg-white border-b border-slate-200 shadow-sm px-6 py-4 z-20">
-                <div class="flex items-center justify-between gap-4">
-                    {{-- KIRI --}}
-                    <div class="flex items-center gap-4 min-w-0">
-                        {{-- MOBILE MENU --}}
+            <header class="flex-shrink-0 bg-white border-b border-slate-200 shadow-sm px-4 sm:px-6 py-3 sm:py-4 z-20">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+
+                    {{-- JUDUL HALAMAN --}}
+                    <div class="flex items-center gap-3 min-w-0">
                         <button type="button" onclick="toggleSidebar()"
                             class="md:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg shrink-0">
                             <i class="uil uil-bars text-2xl"></i>
                         </button>
 
-                        <div class="min-w-0">
-                            <h1 class="text-xl font-bold text-slate-800">
-                                Kelola Home
-                            </h1>
-                        </div>
+                        <h1 class="text-lg sm:text-xl font-bold text-slate-800 whitespace-nowrap">
+                            Kelola Home
+                        </h1>
                     </div>
 
-                    {{-- KANAN --}}
+                    {{-- SIMPAN SEMUA PERUBAHAN --}}
                     <button type="button" id="saveAllHomeChanges"
-                        class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-sm transition shrink-0">
+                        class="inline-flex w-full sm:w-auto items-center justify-center gap-2
+                   bg-emerald-600 hover:bg-emerald-700 text-white
+                   px-4 sm:px-5 py-2.5 rounded-xl font-semibold
+                   shadow-sm transition text-sm sm:text-base">
                         <i class="uil uil-save"></i>
                         Simpan Semua Perubahan
                     </button>
+
                 </div>
             </header>
 
@@ -92,135 +92,30 @@
                     </div>
 
                     <form action="{{ route('header.update') }}" method="POST" enctype="multipart/form-data"
-                        class="space-y-6 home-bulk-update-form">
+                        class="space-y-6">
                         @csrf
                         @method ('PUT')
 
-                        {{-- ================= SUMBER VIDEO ================= --}}
-                        <div>
-                            <label class="block font-semibold text-slate-700 mb-3">
-                                Sumber Video
-                            </label>
+                        {{-- ================= UPLOAD VIDEO SAJA ================= --}}
+                        <input type="hidden" name="source_type" value="file" />
 
-                            <div class="grid sm:grid-cols-3 gap-4">
-                                {{-- YOUTUBE --}}
-                                <label class="relative cursor-pointer">
-                                    <input type="radio" name="source_type" value="youtube" class="peer sr-only"
-                                        {{ old('source_type', $header->video_type ?? 'youtube') === 'youtube' ? 'checked' : '' }} />
-
-                                    <div
-                                        class="rounded-2xl border border-slate-200 p-5 peer-checked:border-indigo-500 peer-checked:bg-indigo-50/50 hover:border-indigo-300 transition">
-                                        <div class="flex items-center gap-3">
-                                            <div
-                                                class="w-11 h-11 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
-                                                <i class="uil uil-youtube text-2xl"></i>
-                                            </div>
-
-                                            <div>
-                                                <p class="font-bold text-slate-800">Link YouTube</p>
-
-                                                <p class="text-xs text-slate-500 mt-1">Gunakan video dari YouTube</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </label>
-
-                                {{-- TIKTOK --}}
-                                <label class="relative cursor-pointer">
-                                    <input type="radio" name="source_type" value="tiktok" class="peer sr-only"
-                                        {{ old('source_type', $header->video_type ?? 'youtube') === 'tiktok' ? 'checked' : '' }} />
-
-                                    <div
-                                        class="rounded-2xl border border-slate-200 p-5 peer-checked:border-indigo-500 peer-checked:bg-indigo-50/50 hover:border-indigo-300 transition">
-                                        <div class="flex items-center gap-3">
-                                            <div
-                                                class="w-11 h-11 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center">
-                                                <i class="uil uil-music text-2xl"></i>
-                                            </div>
-
-                                            <div>
-                                                <p class="font-bold text-slate-800">Link TikTok</p>
-                                                <p class="text-xs text-slate-500 mt-1">
-                                                    Gunakan video dari TikTok
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </label>
-
-                                {{-- UPLOAD --}}
-                                <label class="relative cursor-pointer">
-                                    <input type="radio" name="source_type" value="file" class="peer sr-only"
-                                        {{ old('source_type', $header->video_type ?? 'youtube') === 'file' ? 'checked' : '' }} />
-
-                                    <div
-                                        class="rounded-2xl border border-slate-200 p-5 peer-checked:border-indigo-500 peer-checked:bg-indigo-50/50 hover:border-indigo-300 transition">
-                                        <div class="flex items-center gap-3">
-                                            <div
-                                                class="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                                                <i class="uil uil-upload text-2xl"></i>
-                                            </div>
-
-                                            <div>
-                                                <p class="font-bold text-slate-800">Upload File (MP4)</p>
-
-                                                <p class="text-xs text-slate-500 mt-1">Upload video dari komputer</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-
-                        {{-- ================= YOUTUBE URL ================= --}}
-                        <div id="youtubeField">
-                            <label for="youtube_url" class="block font-semibold text-slate-700">
-                                URL YouTube
-                            </label>
-
-                            <p class="text-xs text-slate-500 mt-1 mb-2">Copy paste link lengkap dari browser.</p>
-
-                            <input type="url" id="youtube_url" name="youtube_url"
-                                value="{{ old('youtube_url', !empty($header->youtube_id) ? 'https://www.youtube.com/watch?v=' . $header->youtube_id : '') }}"
-                                class="w-full border border-slate-200 rounded-xl p-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                placeholder="https://www.youtube.com/watch?v=xxxxxxxxxxx" />
-                        </div>
-
-                        {{-- ================= TIKTOK URL ================= --}}
-                        <div id="tiktokField" class="hidden">
-                            <label for="tiktok_url" class="block font-semibold text-slate-700">
-                                URL TikTok
+                        <div id="fileField">
+                            <label for="video_file" class="block font-semibold text-slate-700">
+                                Upload Video (MP4/MOV, maks 40 MB)
                             </label>
 
                             <p class="text-xs text-slate-500 mt-1 mb-2">
-                                Copy paste link lengkap dari browser.
+                                Pilih video dari komputer. Format MP4 atau MOV, maksimal 40 MB.
                             </p>
 
-                            <input type="url" id="tiktok_url" name="tiktok_url"
-                                value="{{ old('tiktok_url', $header->tiktok_url ?? '') }}"
-                                class="w-full border border-slate-200 rounded-xl p-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                placeholder="https://www.tiktok.com/@akun/video/xxxxxxxxxxxx" />
-                        </div>
-
-                        {{-- ================= UPLOAD FILE ================= --}}
-                        <div id="fileField" class="hidden">
-                            <label for="video_file" class="block font-semibold text-slate-700">
-                                Upload Video
-                            </label>
-
-                            <p class="text-xs text-slate-500 mt-1 mb-2">Format yang didukung: MP4 / MOV, maksimal 20 MB.
-                            </p>
-
-                            <div class="flex items-center gap-3 border border-slate-200 rounded-xl p-3 bg-white">
-
+                            <div
+                                class="flex flex-wrap items-center gap-3 border border-slate-200 rounded-xl p-3 bg-white">
                                 <input type="file" id="video_file" name="video_file"
-                                    accept="video/mp4,video/quicktime" class="hidden"
-                                    onchange="document.getElementById('videoFileName').textContent =
-                                    this.files.length ? this.files[0].name : 'Belum ada file dipilih'" />
+                                    accept="video/mp4,video/quicktime,.mp4,.mov" class="hidden"
+                                    onchange="document.getElementById('videoFileName').textContent = this.files.length ? this.files[0].name : 'Belum ada file dipilih'" />
 
                                 <label for="video_file"
-                                    class="shrink-0 cursor-pointer rounded-lg bg-indigo-50 px-4 py-2
-                                    text-sm font-semibold text-indigo-700 hover:bg-indigo-100">
+                                    class="shrink-0 cursor-pointer rounded-lg bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100">
                                     <i class="uil uil-upload mr-1"></i>
                                     Pilih Video
                                 </label>
@@ -228,8 +123,15 @@
                                 <span id="videoFileName" class="min-w-0 truncate text-sm text-slate-500">
                                     Belum ada file dipilih
                                 </span>
-
                             </div>
+
+                            @if (!empty($header->video_path))
+                                <p class="mt-2 text-sm text-slate-500">
+                                    Video tersimpan:
+                                    <a href="{{ asset('storage/' . $header->video_path) }}" target="_blank"
+                                        rel="noopener noreferrer" class="text-indigo-600 underline">Lihat video</a>
+                                </p>
+                            @endif
                         </div>
 
                         {{-- ================= TOMBOL SIMPAN ================= --}}
@@ -248,24 +150,23 @@
      2. HERO HOME
 ================================================== --}}
                 <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-                    <form action="{{ route('dashboard.home.settings') }}" method="POST"
-                        class="home-bulk-update-form">
+                    <form action="{{ route('dashboard.home.settings') }}" method="POST" class="home-bulk-update-form">
                         @csrf
 
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                             <div>
                                 <h2 class="text-xl font-bold text-slate-800">
-                                    Hero Section
+                                    Welcome Section
                                 </h2>
 
-                                <p class="text-sm text-slate-500 mt-1">Kelola tulisan utama yang tampil pada header
-                                    Home.</p>
+                                <p class="text-sm text-slate-500 mt-1">
+                                    Kelola tulisan sambutan dan foto pada Home.
+                                </p>
                             </div>
 
                             <button type="submit"
-                                class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium">
-                                <i class="uil uil-save mr-1"></i>
-
+                                class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium transition">
+                                <i class="uil uil-save"></i>
                                 {{ $settings ? 'Update' : 'Simpan' }}
                             </button>
                         </div>
@@ -275,11 +176,11 @@
                             <div class="space-y-5">
                                 {{-- BADGE --}}
                                 <div>
-                                    <label class="font-medium text-slate-700">
+                                    <label for="hero_badge" class="font-medium text-slate-700">
                                         Badge
                                     </label>
 
-                                    <input type="text" name="hero_badge"
+                                    <input type="text" id="hero_badge" name="hero_badge"
                                         value="{{ old('hero_badge', $settings?->hero_badge) }}"
                                         class="w-full mt-2 border border-slate-200 rounded-xl p-3"
                                         placeholder="Est. 2017" />
@@ -287,11 +188,11 @@
 
                                 {{-- JUDUL --}}
                                 <div>
-                                    <label class="font-medium text-slate-700">
+                                    <label for="hero_title" class="font-medium text-slate-700">
                                         Judul
                                     </label>
 
-                                    <input type="text" name="hero_title"
+                                    <input type="text" id="hero_title" name="hero_title"
                                         value="{{ old('hero_title', $settings?->hero_title) }}"
                                         class="w-full mt-2 border border-slate-200 rounded-xl p-3"
                                         placeholder="Resto Joss Gandos" />
@@ -300,11 +201,12 @@
 
                             {{-- KANAN --}}
                             <div>
-                                <label class="font-medium text-slate-700">
+                                <label for="hero_subtitle" class="font-medium text-slate-700">
                                     Subtitle
                                 </label>
 
-                                <textarea name="hero_subtitle" rows="6" class="w-full mt-2 border border-slate-200 rounded-xl p-4 resize-none"
+                                <textarea id="hero_subtitle" name="hero_subtitle" rows="6"
+                                    class="w-full mt-2 border border-slate-200 rounded-xl p-4 resize-none"
                                     placeholder="Pelopor No. 1 Resto dan Cafe di Jemursari">{{ old('hero_subtitle', $settings?->hero_subtitle) }}</textarea
                                     >
                                 </div>
@@ -321,33 +223,36 @@
                         <form
                             action="{{ route('dashboard.home.settings') }}"
                             method="POST"
+                            enctype="multipart/form-data"
                             class="home-bulk-update-form"
                         >
                             @csrf
 
-                            {{-- ================= HEADER ================= --}}
-                            <div
-                                class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6"
-                            >
-                                <div>
-                                    <h2
-                                        class="text-xl font-bold text-slate-800"
-                                    >
-                                        Welcome Section
-                                    </h2>
+                           {{-- HEADER WELCOME --}}
+<div class="flex flex-col sm:flex-row sm:items-center
+            sm:justify-between gap-4 mb-6">
 
-                                    <p class="text-sm text-slate-500 mt-1">Kelola tulisan sambutan dan foto pada Home.</p>
-                                </div>
+    <div>
+        <h2 class="text-xl font-bold text-slate-800">
+            Welcome Section
+        </h2>
 
-                                <button
-                                    type="submit"
-                                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium transition"
-                                >
-                                    <i class="uil uil-save mr-1"></i>
+        <p class="text-sm text-slate-500 mt-1">
+            Kelola tulisan sambutan dan foto pada Home.
+        </p>
+    </div>
 
-                                    {{ $settings ? 'Update' : 'Simpan' }}
-                                </button>
-                            </div>
+    <button
+        type="submit"
+        class="inline-flex items-center justify-center gap-2
+               bg-indigo-600 hover:bg-indigo-700 text-white
+               px-5 py-2.5 rounded-xl font-medium transition"
+    >
+        <i class="uil uil-save"></i>
+        {{ $settings ? 'Update' : 'Simpan' }}
+    </button>
+
+</div>
 
                             {{-- ================= BARIS ATAS ================= --}}
                             <div class="grid lg:grid-cols-2 gap-8">
@@ -391,63 +296,57 @@
                                         />
                                     </div>
 
-                                    {{-- FOTO --}}
+                                    {{-- UPLOAD FOTO --}}
                                     <div>
                                         <label
                                             for="welcome_image"
                                             class="block font-medium text-slate-700"
                                         >
-                                            Foto
+                                            Upload Foto (JPG/PNG/WebP, maks 2MB)
                                         </label>
 
                                         <input
-                                            type="url"
+                                            type="file"
                                             id="welcome_image"
                                             name="welcome_image"
-                                            value="{{ old('welcome_image', $settings?->welcome_image) }}"
-                                            class="w-full mt-2 border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                            placeholder="https://..."
+                                            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                            class="w-full mt-2 border border-slate-200 rounded-xl p-3 bg-white
+                                                   file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50
+                                                   file:px-4 file:py-2 file:font-semibold file:text-indigo-700
+                                                   hover:file:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                         />
+
+                                        <p class="text-xs text-slate-400 mt-2">
+                                            Pilih foto maksimal 2 MB. Preview berubah setelah file dipilih.
+                                        </p>
                                     </div>
                                 </div>
 
                                 {{-- ================= KANAN : PREVIEW ================= --}}
                                 <div>
-                                    <label
+                                    <p
                                         class="block font-medium text-slate-700"
                                     >
                                         Preview Foto
-                                    </label>
+                                    </p>
 
                                     <div
                                         class="mt-2 w-full max-w-[340px] aspect-square rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center"
                                     >
-                                        @if ($settings?->welcome_image)
-<img
-                                                id="welcomeImagePreview"
-                                                src="{{ $settings->welcome_image }}"
-                                                alt="Preview Welcome"
-                                                class="w-full h-full object-cover"
-                                            />
-@else
-<div
-                                                id="welcomeImageEmpty"
-                                                class="text-center text-slate-400 px-6"
-                                            >
-                                                <i
-                                                    class="uil uil-image text-5xl"
-                                                ></i>
+                                        <div
+                                            id="welcomeImageEmpty"
+                                            class="{{ $settings?->welcome_image ? 'hidden' : '' }} text-center text-slate-400 px-6"
+                                        >
+                                            <i class="uil uil-image text-5xl"></i>
+                                            <p class="text-sm mt-3">Preview gambar akan muncul di sini</p>
+                                        </div>
 
-                                                <p class="text-sm mt-3">Preview gambar akan muncul di sini</p>
-                                            </div>
-
-                                            <img
-                                                id="welcomeImagePreview"
-                                                src=""
-                                                alt="Preview Welcome"
-                                                class="hidden w-full h-full object-cover"
-                                            />
-@endif
+                                        <img
+                                            id="welcomeImagePreview"
+                                            src="{{ $settings?->welcome_image ? asset('storage/' . $settings->welcome_image) : '' }}"
+                                            alt="Preview Welcome"
+                                            class="{{ $settings?->welcome_image ? '' : 'hidden' }} w-full h-full object-cover"
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -542,11 +441,11 @@
                                 >
                                     {{-- ================= IKON ================= --}}
                                     <div>
-                                        <label
+                                        <p
                                             class="block text-sm font-medium text-slate-600 mb-2"
                                         >
                                             Ikon
-                                        </label>
+                                        </p>
 
                                         {{-- PREVIEW --}}
                                         <div
@@ -569,37 +468,6 @@
                                                 alt="Preview Ikon"
                                                 class="hidden w-full h-full object-contain p-5"
                                             />
-                                        </div>
-
-                                        {{-- PILIH SUMBER --}}
-                                        <div class="flex gap-2 mt-4">
-                                            <button
-                                                type="button"
-                                                id="welcomeFeatureUploadTab"
-                                                onclick="
-                                                    setWelcomeFeatureIconSource(
-                                                        'upload',
-                                                    )
-                                                "
-                                                class="px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-medium"
-                                            >
-                                                <i class="uil uil-upload"></i>
-                                                Upload Ikon
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                id="welcomeFeatureUrlTab"
-                                                onclick="
-                                                    setWelcomeFeatureIconSource(
-                                                        'url',
-                                                    )
-                                                "
-                                                class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-medium"
-                                            >
-                                                <i class="uil uil-link"></i>
-                                                Link Ikon
-                                            </button>
                                         </div>
 
                                         {{-- UPLOAD --}}
@@ -626,21 +494,7 @@
                                             </label>
                                         </div>
 
-                                        {{-- LINK --}}
-                                        <div
-                                            id="welcomeFeatureIconUrlBox"
-                                            class="hidden mt-3"
-                                        >
-                                            <input
-                                                type="url"
-                                                id="welcomeFeatureAddIconUrl"
-                                                name="icon_url"
-                                                class="w-full border border-slate-200 rounded-xl p-3 bg-white"
-                                                placeholder="https://contoh.com/icon.png"
-                                            />
 
-                                            <p class="text-xs text-slate-400 mt-2">Masukkan URL langsung ke gambar ikon.</p>
-                                        </div>
                                     </div>
 
                                     {{-- ================= DATA ================= --}}
@@ -738,23 +592,13 @@
                                                 class="w-12 h-12 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center flex-shrink-0"
                                             >
                                                 @if ($welcomeFeature->icon)
-@if (filter_var($welcomeFeature->icon, FILTER_VALIDATE_URL))
 <img
-                                                            src="{{ $welcomeFeature->icon }}"
-                                                            alt="{{ $welcomeFeature->title }}"
-                                                            class="w-full h-full object-contain p-4"
-                                                        />
+                                                        src="{{ asset('storage/' . $welcomeFeature->icon) }}"
+                                                        alt="{{ $welcomeFeature->title }}"
+                                                        class="w-full h-full object-contain p-4"
+                                                    />
 @else
-<img
-                                                            src="{{ asset('storage/' . $welcomeFeature->icon) }}"
-                                                            alt="{{ $welcomeFeature->title }}"
-                                                            class="w-full h-full object-contain p-4"
-                                                        />
-@endif
-@else
-<i
-                                                        class="uil uil-image-slash text-xl text-slate-300"
-                                                    ></i>
+<i class="uil uil-image-slash text-xl text-slate-300"></i>
 @endif
                                             </div>
 
@@ -797,65 +641,28 @@
                                                 >
                                                     {{-- IKON --}}
                                                     <div>
-                                                        <label
+                                                        <p
                                                             class="block text-sm font-medium text-slate-600 mb-2"
                                                         >
                                                             Ikon
-                                                        </label>
+                                                        </p>
 
                                                         <div
                                                             class="w-[140px] h-[140px] rounded-2xl bg-slate-50 border border-slate-200 overflow-hidden flex items-center justify-center"
                                                         >
                                                             @if ($welcomeFeature->icon)
-@if (filter_var($welcomeFeature->icon, FILTER_VALIDATE_URL))
 <img
-                                                                        id="welcomeUpdatePreview-{{ $welcomeFeature->id }}"
-                                                                        src="{{ $welcomeFeature->icon }}"
-                                                                        alt="{{ $welcomeFeature->title }}"
-                                                                        class="w-full h-full object-contain p-4"
-                                                                    />
+                                                                    id="welcomeUpdatePreview-{{ $welcomeFeature->id }}"
+                                                                    src="{{ asset('storage/' . $welcomeFeature->icon) }}"
+                                                                    alt="{{ $welcomeFeature->title }}"
+                                                                    class="w-full h-full object-contain p-4"
+                                                                />
 @else
-<img
-                                                                        id="welcomeUpdatePreview-{{ $welcomeFeature->id }}"
-                                                                        src="{{ asset('storage/' . $welcomeFeature->icon) }}"
-                                                                        alt="{{ $welcomeFeature->title }}"
-                                                                        class="w-full h-full object-contain p-4"
-                                                                    />
-@endif
-@else
-<i
-                                                                    class="uil uil-image-slash text-3xl text-slate-300"
-                                                                ></i>
+<i class="uil uil-image-slash text-3xl text-slate-300"></i>
 @endif
                                                         </div>
 
-                                                        <div
-                                                            class="flex gap-2 mt-4"
-                                                        >
-                                                            <button
-                                                                type="button"
-                                                                id="welcomeUpdateUploadTab-{{ $welcomeFeature->id }}"
-                                                                onclick="setWelcomeUpdateIconSource({{ $welcomeFeature->id }}, 'upload')"
-                                                                class="px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium"
-                                                            >
-                                                                <i
-                                                                    class="uil uil-upload"
-                                                                ></i>
-                                                                Upload Ikon
-                                                            </button>
 
-                                                            <button
-                                                                type="button"
-                                                                id="welcomeUpdateUrlTab-{{ $welcomeFeature->id }}"
-                                                                onclick="setWelcomeUpdateIconSource({{ $welcomeFeature->id }}, 'url')"
-                                                                class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-sm font-medium"
-                                                            >
-                                                                <i
-                                                                    class="uil uil-link"
-                                                                ></i>
-                                                                Link Ikon
-                                                            </button>
-                                                        </div>
 
                                                         {{-- UPLOAD --}}
                                                         <div
@@ -882,24 +689,14 @@
                                                         </div>
 
                                                         {{-- URL --}}
-                                                        <div
-                                                            id="welcomeUpdateIconUrlBox-{{ $welcomeFeature->id }}"
-                                                            class="hidden mt-3"
-                                                        >
-                                                            <input
-                                                                type="url"
-                                                                id="welcomeUpdateIconUrl-{{ $welcomeFeature->id }}"
-                                                                name="icon_url"
-                                                                class="w-full border border-slate-200 rounded-xl p-3 bg-white"
-                                                                placeholder="https://contoh.com/icon.png"
-                                                            />
-                                                        </div>
+
                                                     </div>
 
                                                     {{-- DATA --}}
                                                     <div class="space-y-5">
                                                         <div>
                                                             <label
+                                                                for="welcomeFeatureTitle-{{ $welcomeFeature->id }}"
                                                                 class="block text-sm font-medium text-slate-600 mb-2"
                                                             >
                                                                 Judul
@@ -907,6 +704,7 @@
 
                                                             <input
                                                                 type="text"
+                                                                id="welcomeFeatureTitle-{{ $welcomeFeature->id }}"
                                                                 name="title"
                                                                 value="{{ $welcomeFeature->title }}"
                                                                 required
@@ -916,6 +714,7 @@
 
                                                         <div>
                                                             <label
+                                                                for="welcomeFeatureDescription-{{ $welcomeFeature->id }}"
                                                                 class="block text-sm font-medium text-slate-600 mb-2"
                                                             >
                                                                 Deskripsi
@@ -923,6 +722,7 @@
 
                                                             <input
                                                                 type="text"
+                                                                id="welcomeFeatureDescription-{{ $welcomeFeature->id }}"
                                                                 name="description"
                                                                 value="{{ $welcomeFeature->description }}"
                                                                 required
@@ -1112,11 +912,11 @@
                                 >
                                     {{-- ================= IKON ================= --}}
                                     <div>
-                                        <label
+                                        <p
                                             class="block text-sm font-medium text-slate-600 mb-2"
                                         >
                                             Ikon
-                                        </label>
+                                        </p>
 
                                         {{-- PREVIEW --}}
                                         <div
@@ -1139,35 +939,6 @@
                                                 alt="Preview Ikon"
                                                 class="hidden w-full h-full object-contain p-5"
                                             />
-                                        </div>
-
-                                        {{-- PILIH SUMBER --}}
-                                        <div class="flex gap-2 mt-4">
-                                            <button
-                                                type="button"
-                                                id="featureUploadTab"
-                                                onclick="
-                                                    setFeatureIconSource(
-                                                        'upload',
-                                                    )
-                                                "
-                                                class="px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-medium"
-                                            >
-                                                <i class="uil uil-upload"></i>
-                                                Upload Ikon
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                id="featureUrlTab"
-                                                onclick="
-                                                    setFeatureIconSource('url')
-                                                "
-                                                class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-medium"
-                                            >
-                                                <i class="uil uil-link"></i>
-                                                Link Ikon
-                                            </button>
                                         </div>
 
                                         {{-- UPLOAD --}}
@@ -1194,21 +965,7 @@
                                             </label>
                                         </div>
 
-                                        {{-- LINK --}}
-                                        <div
-                                            id="featureIconUrlBox"
-                                            class="hidden mt-3"
-                                        >
-                                            <input
-                                                type="url"
-                                                id="featureAddIconUrl"
-                                                name="icon_url"
-                                                class="w-full border border-slate-200 rounded-xl p-3 bg-white"
-                                                placeholder="https://contoh.com/icon.png"
-                                            />
 
-                                            <p class="text-xs text-slate-400 mt-2">Masukkan URL langsung ke gambar ikon.</p>
-                                        </div>
                                     </div>
                                     {{-- ================= KONTEN ================= --}}
                                     <div class="space-y-5">
@@ -1282,13 +1039,8 @@
                         <div
                             class="w-12 h-12 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center flex-shrink-0">
                             @if ($feature->icon)
-                                @if (filter_var($feature->icon, FILTER_VALIDATE_URL))
-                                    <img src="{{ $feature->icon }}" alt="{{ $feature->title }}"
-                                        class="w-full h-full object-contain p-2" />
-                                @else
-                                    <img src="{{ asset('storage/' . $feature->icon) }}" alt="{{ $feature->title }}"
-                                        class="w-full h-full object-contain p-2" />
-                                @endif
+                                <img src="{{ asset('storage/' . $feature->icon) }}" alt="{{ $feature->title }}"
+                                    class="w-full h-full object-contain p-2" />
                             @else
                                 <i class="uil uil-image-slash text-xl text-slate-300"></i>
                             @endif
@@ -1319,24 +1071,18 @@
                             <div class="grid lg:grid-cols-[180px_1fr] gap-6">
                                 {{-- ================= IKON ================= --}}
                                 <div>
-                                    <label class="block text-sm font-medium text-slate-600 mb-2">
+                                    <p class="block text-sm font-medium text-slate-600 mb-2">
                                         Ikon
-                                    </label>
+                                    </p>
 
                                     {{-- PREVIEW IKON SAAT INI --}}
                                     <div
                                         class="w-[140px] h-[140px] rounded-2xl bg-slate-50 border border-slate-200 overflow-hidden flex items-center justify-center">
                                         @if ($feature->icon)
-                                            @if (filter_var($feature->icon, FILTER_VALIDATE_URL))
-                                                <img id="featureUpdatePreview-{{ $feature->id }}"
-                                                    src="{{ $feature->icon }}" alt="{{ $feature->title }}"
-                                                    class="w-full h-full object-contain p-4" />
-                                            @else
-                                                <img id="featureUpdatePreview-{{ $feature->id }}"
-                                                    src="{{ asset('storage/' . $feature->icon) }}"
-                                                    alt="{{ $feature->title }}"
-                                                    class="w-full h-full object-contain p-4" />
-                                            @endif
+                                            <img id="featureUpdatePreview-{{ $feature->id }}"
+                                                src="{{ asset('storage/' . $feature->icon) }}"
+                                                alt="{{ $feature->title }}"
+                                                class="w-full h-full object-contain p-4" />
                                         @else
                                             <div class="text-center text-slate-400">
                                                 <i class="uil uil-image-slash text-3xl"></i>
@@ -1347,23 +1093,7 @@
                                     </div>
 
                                     {{-- PILIH SUMBER IKON --}}
-                                    <div class="flex gap-2 mt-4">
-                                        {{-- UPLOAD --}}
-                                        <button type="button" id="updateUploadTab-{{ $feature->id }}"
-                                            onclick="setUpdateIconSource({{ $feature->id }}, 'upload')"
-                                            class="px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium">
-                                            <i class="uil uil-upload"></i>
-                                            Upload Ikon
-                                        </button>
 
-                                        {{-- LINK --}}
-                                        <button type="button" id="updateUrlTab-{{ $feature->id }}"
-                                            onclick="setUpdateIconSource({{ $feature->id }}, 'url')"
-                                            class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-sm font-medium">
-                                            <i class="uil uil-link"></i>
-                                            Link Ikon
-                                        </button>
-                                    </div>
 
                                     {{-- ================= UPLOAD ================= --}}
                                     <div id="updateIconUploadBox-{{ $feature->id }}" class="mt-3">
@@ -1378,35 +1108,31 @@
                                     </div>
 
                                     {{-- ================= LINK ================= --}}
-                                    <div id="updateIconUrlBox-{{ $feature->id }}" class="hidden mt-3">
-                                        <input type="url" id="updateIconUrl-{{ $feature->id }}" name="icon_url"
-                                            class="w-full border border-slate-200 rounded-xl p-3 bg-white"
-                                            placeholder="https://contoh.com/icon.png" />
 
-                                        <p class="text-xs text-slate-400 mt-2">Masukkan URL langsung ke gambar ikon.
-                                        </p>
-                                    </div>
                                 </div>
 
                                 {{-- ================= DATA ================= --}}
                                 <div class="space-y-5">
                                     {{-- JUDUL --}}
                                     <div>
-                                        <label class="block text-sm font-medium text-slate-600 mb-2">
+                                        <label for="featureUpdateTitle-{{ $feature->id }}"
+                                            class="block text-sm font-medium text-slate-600 mb-2">
                                             Judul
                                         </label>
 
-                                        <input type="text" name="title" value="{{ $feature->title }}" required
+                                        <input type="text" id="featureUpdateTitle-{{ $feature->id }}"
+                                            name="title" value="{{ $feature->title }}" required
                                             class="w-full border border-slate-200 rounded-xl p-3 bg-white" />
                                     </div>
 
                                     {{-- DESKRIPSI --}}
                                     <div>
-                                        <label class="block text-sm font-medium text-slate-600 mb-2">
+                                        <label for="featureUpdateDescription-{{ $feature->id }}"
+                                            class="block text-sm font-medium text-slate-600 mb-2">
                                             Deskripsi
                                         </label>
 
-                                        <textarea name="description" rows="5" required
+                                        <textarea id="featureUpdateDescription-{{ $feature->id }}" name="description" rows="5" required
                                             class="w-full border border-slate-200 rounded-xl p-3 bg-white resize-none">{{ $feature->description }}</textarea
                                                             >
                                                         </div>
@@ -1481,6 +1207,7 @@
                         <form
                             action="{{ route('dashboard.home.settings') }}"
                             method="POST"
+                            enctype="multipart/form-data"
                             class="home-bulk-update-form"
                         >
                             @csrf
@@ -1500,12 +1227,13 @@
                                 </div>
 
                                 <button
-                                    type="submit"
-                                    class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium"
-                                >
-                                    <i class="uil uil-save"></i>
-                                    {{ $settings ? 'Update' : 'Simpan' }}
-                                </button>
+    type="submit"
+    class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium transition"
+>
+    <i class="uil uil-save"></i>
+    {{ $settings ? 'Update' : 'Simpan' }}
+</button>
+
                             </div>
 
                             {{-- ISI --}}
@@ -1576,56 +1304,48 @@
                                         for="dish_image"
                                         class="block font-medium text-slate-700"
                                     >
-                                        URL Foto
+                                        Upload Foto (JPG/PNG/WebP, maks 2MB)
                                     </label>
 
                                     <input
-                                        type="url"
+                                        type="file"
                                         id="dish_image"
                                         name="dish_image"
-                                        value="{{ old('dish_image', $settings?->dish_image) }}"
-                                        class="w-full mt-2 border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                        placeholder="https://..."
+                                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                        class="w-full mt-2 border border-slate-200 rounded-xl p-3 bg-white
+                                               file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50
+                                               file:px-4 file:py-2 file:font-semibold file:text-indigo-700
+                                               hover:file:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                     />
 
-                                    <p class="text-xs text-slate-400 mt-2">Masukkan URL langsung ke gambar.</p>
+                                    <p class="text-xs text-slate-400 mt-2">
+                                        Pilih foto maksimal 2 MB. Preview berubah setelah file dipilih.
+                                    </p>
 
                                     {{-- PREVIEW --}}
-                                    <label
+                                    <p
                                         class="block font-medium text-slate-700 mt-5"
                                     >
                                         Preview Foto
-                                    </label>
+                                    </p>
 
                                     <div
                                         class="mt-2 w-full max-w-[420px] h-[310px] rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center"
                                     >
-                                        @if ($settings?->dish_image)
-<img
-                                                id="dishImagePreview"
-                                                src="{{ $settings->dish_image }}"
-                                                alt="Preview Hidangan Favorit"
-                                                class="w-full h-full object-cover"
-                                            />
-@else
-<div
-                                                id="dishImageEmpty"
-                                                class="text-center text-slate-400 px-6"
-                                            >
-                                                <i
-                                                    class="uil uil-image text-5xl"
-                                                ></i>
+                                        <div
+                                            id="dishImageEmpty"
+                                            class="{{ $settings?->dish_image ? 'hidden' : '' }} text-center text-slate-400 px-6"
+                                        >
+                                            <i class="uil uil-image text-5xl"></i>
+                                            <p class="text-sm mt-3">Preview gambar akan muncul di sini</p>
+                                        </div>
 
-                                                <p class="text-sm mt-3">Preview gambar akan muncul di sini</p>
-                                            </div>
-
-                                            <img
-                                                id="dishImagePreview"
-                                                src=""
-                                                alt="Preview Hidangan Favorit"
-                                                class="hidden w-full h-full object-cover"
-                                            />
-@endif
+                                        <img
+                                            id="dishImagePreview"
+                                            src="{{ $settings?->dish_image ? asset('storage/' . $settings->dish_image) : '' }}"
+                                            alt="Preview Hidangan Favorit"
+                                            class="{{ $settings?->dish_image ? '' : 'hidden' }} w-full h-full object-cover"
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -1758,14 +1478,15 @@
                                                 Nama Pelanggan
                                             </label>
 
-                                            <input
-                                                type="text"
-                                                id="testimonialAddName"
-                                                name="name"
-                                                required
-                                                class="w-full border border-slate-200 rounded-xl p-3 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                                placeholder="Contoh: Budi Santoso"
-                                            />
+                                           <input
+    type="text"
+    id="testimonialAddName"
+    name="name"
+    autocomplete="off"
+    required
+    class="w-full border border-slate-200 rounded-xl p-3 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+    placeholder="Contoh: Budi Santoso"
+/>
                                         </div>
 
                                         {{-- ULASAN --}}
@@ -1847,22 +1568,26 @@
                                             <div class="space-y-5">
                                                 {{-- NAMA --}}
                                                 <div>
-                                                    <label class="block text-sm font-medium text-slate-700 mb-2">
+                                                    <label for="testimonialUpdateName-{{ $testimonial->id }}"
+                                                        class="block text-sm font-medium text-slate-700 mb-2">
                                                         Nama Pelanggan
                                                     </label>
 
-                                                    <input type="text" name="name"
-                                                        value="{{ $testimonial->name }}" required
+                                                    <input type="text"
+                                                        id="testimonialUpdateName-{{ $testimonial->id }}"
+                                                        name="name" value="{{ $testimonial->name }}"
+                                                        autocomplete="off" required
                                                         class="w-full border border-slate-200 rounded-xl p-3 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                                                 </div>
 
                                                 {{-- ULASAN --}}
                                                 <div>
-                                                    <label class="block text-sm font-medium text-slate-700 mb-2">
+                                                    <label for="testimonialUpdateReview-{{ $testimonial->id }}"
+                                                        class="block text-sm font-medium text-slate-700 mb-2">
                                                         Ulasan Pelanggan
                                                     </label>
 
-                                                    <textarea name="review" rows="5" required
+                                                    <textarea id="testimonialUpdateReview-{{ $testimonial->id }}" name="review" rows="5" required
                                                         class="w-full border border-slate-200 rounded-xl p-3 bg-white resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ $testimonial->review }}</textarea>
                                                 </div>
 
@@ -2034,56 +1759,33 @@
                 const preview = document.getElementById("welcomeImagePreview");
                 const empty = document.getElementById("welcomeImageEmpty");
 
-                if (!input || !preview) {
-                    return;
-                }
+                if (!input || !preview) return;
 
-                function showPreview(url) {
-                    url = url.trim();
+                let previewUrl = null;
 
-                    if (!url) {
-                        preview.src = "";
-                        preview.classList.add("hidden");
+                input.addEventListener("change", function() {
+                    const file = this.files[0];
+                    if (!file) return;
 
-                        if (empty) {
-                            empty.classList.remove("hidden");
-                        }
-
+                    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+                    if (!allowedTypes.includes(file.type)) {
+                        alert("Pilih foto JPG, PNG, atau WebP.");
+                        this.value = "";
                         return;
                     }
 
-                    preview.onload = function() {
-                        preview.classList.remove("hidden");
+                    if (file.size > 2 * 1024 * 1024) {
+                        alert("Ukuran foto maksimal 2 MB.");
+                        this.value = "";
+                        return;
+                    }
 
-                        if (empty) {
-                            empty.classList.add("hidden");
-                        }
-                    };
-
-                    preview.onerror = function() {
-                        preview.classList.add("hidden");
-
-                        if (empty) {
-                            empty.classList.remove("hidden");
-                            empty.innerHTML = `
-                        <i class="uil uil-image-slash text-5xl"></i>
-                        <p class="text-sm mt-3">
-                            Gambar tidak dapat dimuat
-                        </p>
-                    `;
-                        }
-                    };
-
-                    preview.src = url;
-                }
-
-                input.addEventListener("input", function() {
-                    showPreview(this.value);
+                    if (previewUrl) URL.revokeObjectURL(previewUrl);
+                    previewUrl = URL.createObjectURL(file);
+                    preview.src = previewUrl;
+                    preview.classList.remove("hidden");
+                    if (empty) empty.classList.add("hidden");
                 });
-
-                if (input.value.trim()) {
-                    showPreview(input.value);
-                }
             });
         </script>
 
@@ -2372,59 +2074,33 @@
                 const preview = document.getElementById("dishImagePreview");
                 const empty = document.getElementById("dishImageEmpty");
 
-                if (!input || !preview) {
-                    return;
-                }
+                if (!input || !preview) return;
 
-                function showDishPreview(url) {
-                    url = url.trim();
+                let previewUrl = null;
 
-                    if (!url) {
-                        preview.src = "";
-                        preview.classList.add("hidden");
+                input.addEventListener("change", function() {
+                    const file = this.files[0];
+                    if (!file) return;
 
-                        if (empty) {
-                            empty.classList.remove("hidden");
-                        }
-
+                    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+                    if (!allowedTypes.includes(file.type)) {
+                        alert("Pilih foto JPG, PNG, atau WebP.");
+                        this.value = "";
                         return;
                     }
 
-                    preview.onload = function() {
-                        preview.classList.remove("hidden");
+                    if (file.size > 2 * 1024 * 1024) {
+                        alert("Ukuran foto maksimal 2 MB.");
+                        this.value = "";
+                        return;
+                    }
 
-                        if (empty) {
-                            empty.classList.add("hidden");
-                        }
-                    };
-
-                    preview.onerror = function() {
-                        preview.classList.add("hidden");
-
-                        if (empty) {
-                            empty.classList.remove("hidden");
-
-                            empty.innerHTML = `
-                        <i class="uil uil-image-slash text-5xl"></i>
-                        <p class="text-sm mt-3">
-                            Gambar tidak dapat dimuat
-                        </p>
-                    `;
-                        }
-                    };
-
-                    preview.src = url;
-                }
-
-                // Saat mengetik URL
-                input.addEventListener("input", function() {
-                    showDishPreview(this.value);
+                    if (previewUrl) URL.revokeObjectURL(previewUrl);
+                    previewUrl = URL.createObjectURL(file);
+                    preview.src = previewUrl;
+                    preview.classList.remove("hidden");
+                    if (empty) empty.classList.add("hidden");
                 });
-
-                // Saat halaman pertama kali dibuka
-                if (input.value.trim()) {
-                    showDishPreview(input.value);
-                }
             });
         </script>
 

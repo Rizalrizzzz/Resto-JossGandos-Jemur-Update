@@ -8,7 +8,8 @@
 
     <link rel="icon" type="image/png" href="{{ asset('img/logojossgandos.png') }}">
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+
     <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css" />
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
@@ -65,6 +66,52 @@
             position: relative;
             z-index: 10;
         }
+
+        /* Perbaikan tabel menu pada tampilan mobile */
+        @media (max-width: 767px) {
+            #dashboard-menu table {
+                width: 760px;
+                min-width: 760px;
+                table-layout: fixed;
+            }
+
+            #dashboard-menu th:nth-child(1),
+            #dashboard-menu td:nth-child(1) {
+                width: 250px;
+            }
+
+            #dashboard-menu th:nth-child(2),
+            #dashboard-menu td:nth-child(2) {
+                width: 280px;
+            }
+
+            #dashboard-menu th:nth-child(3),
+            #dashboard-menu td:nth-child(3) {
+                width: 100px;
+            }
+
+            #dashboard-menu th:nth-child(4),
+            #dashboard-menu td:nth-child(4) {
+                width: 130px;
+            }
+
+            #dashboard-menu td:first-child>div {
+                min-width: 0;
+            }
+
+            #dashboard-menu td:first-child img {
+                flex-shrink: 0;
+            }
+
+            #dashboard-menu td:first-child span {
+                min-width: 0;
+                overflow-wrap: anywhere;
+            }
+
+            #dashboard-menu td:nth-child(2) p {
+                overflow-wrap: anywhere;
+            }
+        }
     </style>
 </head>
 
@@ -95,7 +142,7 @@
                 <button onclick="openChooseModal()"
                     class="flex items-center gap-2 bg-green-700 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5">
                     <i class="uil uil-plus-circle text-lg"></i>
-                    <span>Tambah Data</span>
+                    <span>Edit Data</span>
                 </button>
             </header>
 
@@ -367,9 +414,7 @@
                                                 @php
                                                     $menuImage = trim($menu->image_path ?? '');
 
-                                                    if (filter_var($menuImage, FILTER_VALIDATE_URL)) {
-                                                        $menuImageUrl = $menuImage;
-                                                    } elseif (str_starts_with($menuImage, 'public/')) {
+                                                    if (str_starts_with($menuImage, 'public/')) {
                                                         $menuImageUrl = asset(substr($menuImage, 7));
                                                     } elseif (str_starts_with($menuImage, 'img/')) {
                                                         $menuImageUrl = asset($menuImage);
@@ -467,9 +512,7 @@
                                                     @php
                                                         $photoImage = trim($photo->image_path ?? '');
 
-                                                        if (filter_var($photoImage, FILTER_VALIDATE_URL)) {
-                                                            $photoImageUrl = $photoImage;
-                                                        } elseif (str_starts_with($photoImage, 'public/')) {
+                                                        if (str_starts_with($photoImage, 'public/')) {
                                                             $photoImageUrl = asset(substr($photoImage, 7));
                                                         } elseif (str_starts_with($photoImage, 'img/')) {
                                                             $photoImageUrl = asset($photoImage);
@@ -558,13 +601,9 @@
                                                     @php
                                                         $promotionImage = trim($promotion->image_path ?? '');
 
-                                                        if (filter_var($promotionImage, FILTER_VALIDATE_URL)) {
-                                                            $promotionImageUrl = $promotionImage;
-                                                        } else {
-                                                            $promotionImageUrl = \Illuminate\Support\Facades\Storage::url(
-                                                                $promotionImage,
-                                                            );
-                                                        }
+                                                        $promotionImageUrl = \Illuminate\Support\Facades\Storage::url(
+                                                            $promotionImage,
+                                                        );
                                                     @endphp
 
                                                     <img src="{{ $promotionImageUrl }}"
@@ -663,9 +702,7 @@
                                                     @php
                                                         $packageImage = trim($package->image_path ?? '');
 
-                                                        if (filter_var($packageImage, FILTER_VALIDATE_URL)) {
-                                                            $packageImageUrl = $packageImage;
-                                                        } elseif (str_starts_with($packageImage, '/storage/')) {
+                                                        if (str_starts_with($packageImage, '/storage/')) {
                                                             $packageImageUrl = asset(ltrim($packageImage, '/'));
                                                         } elseif (str_starts_with($packageImage, 'storage/')) {
                                                             $packageImageUrl = asset($packageImage);
@@ -798,83 +835,23 @@
                         </button>
                     </div>
 
-                    @php
-                        $h_type = $header->video_type ?? 'youtube';
-                        $h_tiktok = $header->tiktok_url ?? '';
-                        $h_yt = $header->youtube_id ?? 'b2y8iRP0eXg';
-                    @endphp
-
                     <form action="{{ route('header.update') }}" method="POST" enctype="multipart/form-data"
                         class="space-y-4">
                         @csrf
                         @method ('PUT')
 
+                        <input type="hidden" name="source_type" value="file" />
+
                         <div>
-                            <label class="block text-xs font-semibold text-slate-500 uppercase mb-3">Sumber
-                                Video</label>
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                {{-- YOUTUBE --}}
-                                <label
-                                    class="flex items-center gap-2 cursor-pointer p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
-                                    <input type="radio" name="source_type" value="youtube"
-                                        class="w-4 h-4 text-purple-600 focus:ring-purple-500"
-                                        {{ $h_type == 'youtube' ? 'checked' : '' }}
-                                        onclick="toggleVideoInput('youtube')" />
-                                    <span class="text-sm font-medium text-slate-700">Link YouTube</span>
-                                </label>
-
-                                {{-- TIKTOK --}}
-                                <label
-                                    class="flex items-center gap-2 cursor-pointer p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
-                                    <input type="radio" name="source_type" value="tiktok"
-                                        class="w-4 h-4 text-purple-600 focus:ring-purple-500"
-                                        {{ $h_type == 'tiktok' ? 'checked' : '' }}
-                                        onclick="toggleVideoInput('tiktok')" />
-                                    <span class="text-sm font-medium text-slate-700">Link TikTok</span>
-                                </label>
-
-                                {{-- UPLOAD MP4 --}}
-                                <label
-                                    class="flex items-center gap-2 cursor-pointer p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
-                                    <input type="radio" name="source_type" value="file"
-                                        class="w-4 h-4 text-purple-600 focus:ring-purple-500"
-                                        {{ $h_type == 'file' ? 'checked' : '' }} onclick="toggleVideoInput('file')" />
-                                    <span class="text-sm font-medium text-slate-700">Upload File (MP4)</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div id="input-youtube" class="{{ $h_type == 'youtube' ? 'block' : 'hidden' }}">
-                            <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">URL
-                                YouTube</label>
-                            <input type="text" name="youtube_url"
-                                value="{{ $h_type == 'youtube' ? 'https://www.youtube.com/watch?v=' . $h_yt : '' }}"
-                                class="w-full rounded-lg border-slate-300 focus:border-purple-500 focus:ring-purple-500 text-sm p-2.5 bg-slate-50"
-                                placeholder="Contoh: https://www.youtube.com/watch?v=b2y8iRP0eXg" />
-                            <p class="text-[10px] text-slate-400 mt-1">Copy paste link lengkap dari browser.</p>
-                        </div>
-
-                        <div id="input-tiktok" class="{{ $h_type == 'tiktok' ? 'block' : 'hidden' }}">
-
-                            <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">
-                                URL TikTok
+                            <label for="headerVideoFile" class="block text-sm font-semibold text-slate-700 mb-2">
+                                Upload Video Header
                             </label>
-
-                            <input type="url" name="tiktok_url" value="{{ old('tiktok_url', $h_tiktok) }}"
-                                class="w-full rounded-lg border-slate-300 focus:border-purple-500 focus:ring-purple-500 text-sm p-2.5 bg-slate-50"
-                                placeholder="https://www.tiktok.com/@akun/video/..." />
-
-                            <p class="text-[10px] text-slate-400 mt-1">
-                                Copy paste link lengkap dari browser.
+                            <input type="file" name="video_file" id="headerVideoFile" accept=".mp4,video/mp4"
+                                class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium" />
+                            <p class="mt-2 text-xs text-slate-500">
+                                Format MP4. Maksimal 40 MB. Jika tidak memilih file baru, video yang tersimpan tetap
+                                digunakan.
                             </p>
-                        </div>
-
-                        <div id="input-file" class="{{ $h_type == 'file' ? 'block' : 'hidden' }}">
-                            <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Upload
-                                Video</label>
-                            <input type="file" name="video_file" accept="video/mp4"
-                                class="w-full text-xs text-slate-500 file:mr-2 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100" />
-                            <p class="text-[10px] text-slate-400 mt-1">Format: MP4. Maksimal ukuran: 20MB.</p>
                         </div>
 
                         <button type="submit"
@@ -922,11 +899,9 @@
                             <div
                                 class="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden shrink-0">
                                 <img
-                                    src="{{ filter_var($orderButtons[0]->icon, FILTER_VALIDATE_URL)
-                                        ? $orderButtons[0]->icon
-                                        : (str_starts_with($orderButtons[0]->icon, 'img/')
-                                            ? asset($orderButtons[0]->icon)
-                                            : asset('storage/' . ltrim($orderButtons[0]->icon, '/'))) }}" />
+                                    src="{{ str_starts_with($orderButtons[0]->icon, 'img/')
+                                        ? asset($orderButtons[0]->icon)
+                                        : asset('storage/' . ltrim($orderButtons[0]->icon, '/')) }}" />
                             </div>
 
                             <div class="flex-1">
@@ -946,11 +921,9 @@
                             <div
                                 class="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden shrink-0">
                                 <img
-                                    src="{{ filter_var($orderButtons[1]->icon, FILTER_VALIDATE_URL)
-                                        ? $orderButtons[1]->icon
-                                        : (str_starts_with($orderButtons[1]->icon, 'img/')
-                                            ? asset($orderButtons[1]->icon)
-                                            : asset('storage/' . ltrim($orderButtons[1]->icon, '/'))) }}" />
+                                    src="{{ str_starts_with($orderButtons[1]->icon, 'img/')
+                                        ? asset($orderButtons[1]->icon)
+                                        : asset('storage/' . ltrim($orderButtons[1]->icon, '/')) }}" />
                             </div>
 
                             <div class="flex-1">
@@ -970,11 +943,9 @@
                             <div
                                 class="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden shrink-0">
                                 <img
-                                    src="{{ filter_var($orderButtons[2]->icon, FILTER_VALIDATE_URL)
-                                        ? $orderButtons[2]->icon
-                                        : (str_starts_with($orderButtons[2]->icon, 'img/')
-                                            ? asset($orderButtons[2]->icon)
-                                            : asset('storage/' . ltrim($orderButtons[2]->icon, '/'))) }}" />
+                                    src="{{ str_starts_with($orderButtons[2]->icon, 'img/')
+                                        ? asset($orderButtons[2]->icon)
+                                        : asset('storage/' . ltrim($orderButtons[2]->icon, '/')) }}" />
                             </div>
 
                             <div class="flex-1">
@@ -1035,9 +1006,9 @@
                         <div class="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-6">
                             <!-- KIRI : GAMBAR -->
                             <div>
-                                <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                <p class="block text-sm font-semibold text-slate-700 mb-2">
                                     Preview Gambar
-                                </label>
+                                </p>
 
                                 <!-- PREVIEW KECIL -->
                                 <div
@@ -1046,26 +1017,27 @@
                                         class="w-full h-full object-contain" />
                                 </div>
 
-                                <!-- URL GAMBAR -->
-                                <div class="mt-5">
-                                    <label class="block text-xs font-semibold text-slate-500 mb-1">
-                                        URL Gambar
-                                    </label>
-
-                                    <input type="text" id="orderIconUrl" name="icon_url"
-                                        placeholder="https://contoh.com/icon.png"
-                                        class="w-full rounded-lg border border-slate-300 text-sm p-2.5 bg-white focus:border-green-500 focus:ring-green-500" />
-                                </div>
-
-                                <!-- UPLOAD GAMBAR -->
+                                <!-- PILIH GAMBAR: URL DIHAPUS, CHOOSE FILE + NAMA FILE DALAM SATU BINGKAI -->
                                 <div class="mt-4">
-                                    <label class="block text-xs font-semibold text-slate-500 mb-1">
-                                        Upload Gambar
-                                    </label>
+                                    <p class="block text-xs font-semibold text-slate-500 mb-2">
+                                        Ganti Gambar
+                                    </p>
 
-                                    <input type="file" id="orderIconFile" name="icon_file"
-                                        accept="image/png,image/jpeg,image/webp"
-                                        class="w-full text-xs text-slate-500" />
+                                    <div
+                                        class="flex w-full min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 focus-within:border-green-500 focus-within:ring-2 focus-within:ring-green-100">
+                                        <label for="orderIconFile"
+                                            class="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-lg bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-200">
+                                            Choose File
+                                        </label>
+                                        <span id="orderIconFileName"
+                                            class="min-w-0 truncate text-sm text-slate-500">No file chosen</span>
+                                        <input type="file" id="orderIconFile" name="icon_file"
+                                            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                            class="sr-only" aria-describedby="orderIconHelp" />
+                                    </div>
+                                    <p id="orderIconHelp" class="mt-2 text-xs text-slate-500">
+                                        Format JPG, JPEG, PNG, atau WebP. Maksimal 2 MB.
+                                    </p>
                                 </div>
                             </div>
 
@@ -1073,7 +1045,8 @@
                             <div>
                                 <!-- JUDUL -->
                                 <div>
-                                    <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                    <label for="orderTitleInput"
+                                        class="block text-sm font-semibold text-slate-700 mb-2">
                                         Judul
                                     </label>
 
@@ -1084,7 +1057,8 @@
 
                                 <!-- LINK -->
                                 <div class="mt-5">
-                                    <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                    <label for="orderLinkInput"
+                                        class="block text-sm font-semibold text-slate-700 mb-2">
                                         Link
                                     </label>
 
@@ -1270,19 +1244,6 @@
             // Isi link
             document.getElementById("orderLinkInput").value = button.link || "";
 
-            // Isi URL gambar jika menggunakan URL
-            const iconUrlInput = document.getElementById("orderIconUrl");
-
-            if (
-                button.icon &&
-                (button.icon.startsWith("http://") ||
-                    button.icon.startsWith("https://"))
-            ) {
-                iconUrlInput.value = button.icon;
-            } else {
-                iconUrlInput.value = "";
-            }
-
             // Preview gambar
             const preview = document.getElementById("orderPreviewImage");
 
@@ -1291,19 +1252,14 @@
                     return "";
                 }
 
-                // URL gambar dari internet
-                if (icon.startsWith("http://") || icon.startsWith("https://")) {
-                    return icon;
-                }
-
                 // Gambar bawaan public/img
                 if (icon.startsWith("img/")) {
-                    return "{{ asset('') }}" + icon;
+                    return "{{ url('/') }}" + icon;
                 }
 
                 // Jika tersimpan dengan public/
                 if (icon.startsWith("public/")) {
-                    return "{{ asset('') }}" + icon.substring(7);
+                    return "{{ url('/') }}" + icon.substring(7);
                 }
 
                 // File dari storage
@@ -1328,8 +1284,10 @@
             document.getElementById("orderButtonEditForm").action =
                 "{{ url('/dashboard/order-buttons') }}/" + button.id;
 
-            // Kosongkan file upload
+            // Kosongkan pilihan file dan reset teks nama file.
             document.getElementById("orderIconFile").value = "";
+            const orderFileName = document.getElementById("orderIconFileName");
+            if (orderFileName) orderFileName.textContent = "No file chosen";
 
             // Tutup pilihan Order Now
             closeOrderButtonsModal();
@@ -1355,47 +1313,65 @@
         // =========================================================
 
         const orderIconFile = document.getElementById("orderIconFile");
-        const orderIconUrl = document.getElementById("orderIconUrl");
+        const orderIconFileName = document.getElementById("orderIconFileName");
         const orderPreviewImage = document.getElementById("orderPreviewImage");
 
-        // Preview saat upload file
+        // Preview gambar, tampilkan nama file, dan validasi file Order Now.
         if (orderIconFile) {
             orderIconFile.addEventListener("change", function() {
-                const file = this.files[0];
+                const file = this.files && this.files[0];
 
-                if (!file) return;
+                if (!file) {
+                    if (orderIconFileName) orderIconFileName.textContent = "No file chosen";
+                    return;
+                }
+
+                const extension = (file.name.split(".").pop() || "").toLowerCase();
+                const allowedExtensions = ["jpg", "jpeg", "png", "webp"];
+
+                if (!allowedExtensions.includes(extension)) {
+                    this.value = "";
+                    if (orderIconFileName) orderIconFileName.textContent = "No file chosen";
+                    alert("Format gambar harus JPG, JPEG, PNG, atau WebP.");
+                    return;
+                }
+
+                if (file.size > 2 * 1024 * 1024) {
+                    this.value = "";
+                    if (orderIconFileName) orderIconFileName.textContent = "No file chosen";
+                    alert("Ukuran gambar Order Now maksimal 2 MB.");
+                    return;
+                }
+
+                if (orderIconFileName) orderIconFileName.textContent = file.name;
 
                 const reader = new FileReader();
-
                 reader.onload = function(event) {
                     orderPreviewImage.src = event.target.result;
                 };
-
                 reader.readAsDataURL(file);
             });
         }
 
-        // Preview saat memasukkan URL gambar
-        if (orderIconUrl) {
-            orderIconUrl.addEventListener("input", function() {
-                const url = this.value.trim();
+        // Validasi ukuran dan format video header di browser.
+        const headerVideoFile = document.getElementById("headerVideoFile");
+        if (headerVideoFile) {
+            headerVideoFile.addEventListener("change", function() {
+                const file = this.files && this.files[0];
+                if (!file) return;
 
-                if (!url) return;
+                const extension = (file.name.split(".").pop() || "").toLowerCase();
+                if (extension !== "mp4" || (file.type && file.type !== "video/mp4")) {
+                    this.value = "";
+                    alert("Video Header harus berformat MP4.");
+                    return;
+                }
 
-                orderPreviewImage.src = url;
+                if (file.size > 40 * 1024 * 1024) {
+                    this.value = "";
+                    alert("Ukuran Video Header maksimal 40 MB.");
+                }
             });
-        }
-
-        function toggleVideoInput(type) {
-            const inputYt = document.getElementById("input-youtube");
-            const inputTiktok = document.getElementById("input-tiktok");
-            const inputFile = document.getElementById("input-file");
-
-            if (!inputYt || !inputTiktok || !inputFile) return;
-
-            inputYt.classList.toggle("hidden", type !== "youtube");
-            inputTiktok.classList.toggle("hidden", type !== "tiktok");
-            inputFile.classList.toggle("hidden", type !== "file");
         }
 
         // =========================================================

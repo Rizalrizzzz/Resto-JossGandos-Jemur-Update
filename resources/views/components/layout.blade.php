@@ -6,13 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
 
-    @vite (['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <title>Resto Joss Gandos</title>
 
     <link rel="icon" type="image/png" href="{{ asset('img/logojossgandos.png') }}" />
-
-    <script src="https://cdn.tailwindcss.com"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module"></script>
 
@@ -644,8 +642,7 @@
     </style>
 </head>
 
-<body class="relative z-20 bg-cover bg-fixed bg-center"
-    style="background-image: url('{{ asset('public/img/backgroundbatik.png') }}');">
+<body class="relative z-20">
     {{-- Header hanya tampil di Home --}}
     @if (request()->is('/'))
         <x-header :header="$header ?? null" :settings="$settings ?? null" />

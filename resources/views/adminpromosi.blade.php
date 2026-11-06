@@ -9,7 +9,7 @@
 
     <link rel="icon" type="image/png" href="{{ asset('img/logojossgandos.png') }}">
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css" />
 
@@ -135,14 +135,8 @@
                             <tbody class="divide-y divide-slate-100">
                                 @forelse ($promotions as $promotion)
                                     @php
-
-                                        $imageUrl = \Illuminate\Support\Str::startsWith($promotion->image_path, [
-                                            'http://',
-                                            'https://',
-                                        ])
-                                            ? $promotion->image_path
-                                            : asset('storage/' . $promotion->image_path);
-
+                                        // Gambar promosi hanya menggunakan file yang tersimpan di storage.
+                                        $imageUrl = asset('storage/' . $promotion->image_path);
                                     @endphp
 
                                     <tr class="hover:bg-slate-50 transition">
@@ -354,9 +348,9 @@
                 <div class="p-6 space-y-5">
                     {{-- GAMBAR --}}
                     <div>
-                        <label class="block text-sm font-medium mb-2">
+                        <p class="block text-sm font-medium mb-2">
                             Gambar Promo
-                        </label>
+                        </p>
 
                         <div class="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-5">
                             {{-- PREVIEW --}}
@@ -371,40 +365,21 @@
                                     class="hidden w-full h-full object-cover" />
                             </div>
 
-                            {{-- SUMBER GAMBAR --}}
-                            <div class="space-y-4">
-                                {{-- UPLOAD --}}
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">
-                                        Upload
-                                        File
-                                    </label>
+                            {{-- UPLOAD GAMBAR --}}
+                            <div>
+                                <label for="addImageFile" class="block text-sm font-medium mb-2">
+                                    Upload Foto (JPG/PNG/WebP, maks 2MB)
+                                </label>
 
-                                    <input type="file" name="image_file" id="addImageFile" accept="image/*"
-                                        onchange="
-                                                                            handleAddFile()
-                                                                        "
-                                        class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium" />
-                                </div>
+                                <input type="file" name="image_file" id="addImageFile"
+                                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required
+                                    onchange="handleAddFile()"
+                                    class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium" />
 
-                                {{-- URL --}}
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">
-                                        Atau
-                                        Gunakan
-                                        URL
-                                    </label>
-
-                                    <input type="url" name="image_url" id="addImageUrl"
-                                        oninput="
-                                                                            handleAddUrl()
-                                                                        "
-                                        placeholder="https://contoh.com/poster.jpg"
-                                        class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
-
-                                    <p id="addImageMessage" class="hidden mt-2 text-xs text-red-500">Pilih salah satu:
-                                        upload file atau gunakan URL gambar.</p>
-                                </div>
+                                <p id="addFileSizeMessage" class="hidden mt-2 text-xs text-red-500 font-medium"></p>
+                                <p class="text-xs text-slate-400 mt-2">
+                                    Pilih foto maksimal 2 MB. Preview berubah setelah file dipilih.
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -434,7 +409,7 @@
                         {{-- JADWAL --}}
                         <div id="addHomeSchedule" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
                             <div>
-                                <label class="block text-sm font-medium mb-2">
+                                <label for="addHomeStart" class="block text-sm font-medium mb-2">
                                     Mulai Tayang
                                 </label>
 
@@ -443,7 +418,7 @@
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium mb-2">
+                                <label for="addHomeEnd" class="block text-sm font-medium mb-2">
                                     Selesai
                                     Tayang
                                 </label>
@@ -457,7 +432,7 @@
                     {{-- STATUS + URUTAN --}}
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium mb-2">
+                            <label for="addActive" class="block text-sm font-medium mb-2">
                                 Status Menu
                             </label>
 
@@ -474,11 +449,11 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium mb-2">
+                            <label for="addSort" class="block text-sm font-medium mb-2">
                                 Urutan
                             </label>
 
-                            <input type="number" name="sort_order" value="0" min="0"
+                            <input type="number" id="addSort" name="sort_order" value="0" min="0"
                                 class="w-full h-11 px-4 border border-slate-200 rounded-xl" />
                         </div>
                     </div>
@@ -534,9 +509,9 @@
                 <div class="p-6 space-y-5">
                     {{-- GAMBAR --}}
                     <div>
-                        <label class="block text-sm font-medium mb-2">
+                        <p class="block text-sm font-medium mb-2">
                             Gambar Promo
-                        </label>
+                        </p>
 
                         <div class="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-5">
                             {{-- PREVIEW --}}
@@ -551,40 +526,22 @@
                                     class="w-full h-full object-cover" />
                             </div>
 
-                            {{-- SUMBER --}}
-                            <div class="space-y-4">
-                                {{-- FILE --}}
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">
-                                        Ganti
-                                        File
-                                    </label>
+                            {{-- UPLOAD GAMBAR --}}
+                            <div>
+                                <label for="updateImageFile" class="block text-sm font-medium mb-2">
+                                    Upload Foto (JPG/PNG/WebP, maks 2MB)
+                                </label>
 
-                                    <input type="file" name="image_file" id="updateImageFile" accept="image/*"
-                                        onchange="
-                                                                            handleUpdateFile()
-                                                                        "
-                                        class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium" />
-                                </div>
+                                <input type="file" name="image_file" id="updateImageFile"
+                                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                    onchange="handleUpdateFile()"
+                                    class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium" />
 
-                                {{-- URL --}}
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">
-                                        Atau
-                                        Gunakan
-                                        URL
-                                    </label>
-
-                                    <input type="url" name="image_url" id="updateImageUrl"
-                                        oninput="
-                                                                            handleUpdateUrl()
-                                                                        "
-                                        placeholder="https://contoh.com/poster.jpg"
-                                        class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
-
-                                    <p id="updateImageMessage" class="hidden mt-2 text-xs text-red-500">Pilih salah
-                                        satu: upload file atau gunakan URL gambar.</p>
-                                </div>
+                                <p id="updateFileSizeMessage" class="hidden mt-2 text-xs text-red-500 font-medium">
+                                </p>
+                                <p class="text-xs text-slate-400 mt-2">
+                                    Pilih foto maksimal 2 MB. Preview berubah setelah file dipilih.
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -614,7 +571,7 @@
                         {{-- JADWAL --}}
                         <div id="updateHomeSchedule" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
                             <div>
-                                <label class="block text-sm font-medium mb-2">
+                                <label for="updateHomeStart" class="block text-sm font-medium mb-2">
                                     Mulai Tayang
                                 </label>
 
@@ -623,7 +580,7 @@
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium mb-2">
+                                <label for="updateHomeEnd" class="block text-sm font-medium mb-2">
                                     Selesai
                                     Tayang
                                 </label>
@@ -637,7 +594,7 @@
                     {{-- STATUS + URUTAN --}}
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium mb-2">
+                            <label for="updateActive" class="block text-sm font-medium mb-2">
                                 Status Menu
                             </label>
 
@@ -658,7 +615,7 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium mb-2">
+                            <label for="updateSort" class="block text-sm font-medium mb-2">
                                 Urutan
                             </label>
 
@@ -746,125 +703,33 @@
             ====================================================== */
 
         function handleAddFile() {
-            const fileInput =
-                document.getElementById(
-                    "addImageFile",
-                );
-
-            const urlInput =
-                document.getElementById(
-                    "addImageUrl",
-                );
-
-            const message =
-                document.getElementById(
-                    "addImageMessage",
-                );
-
-            const image =
-                document.getElementById(
-                    "addPreviewImage",
-                );
-
-            const text =
-                document.getElementById(
-                    "addPreviewText",
-                );
-
+            const fileInput = document.getElementById("addImageFile");
+            const message = document.getElementById("addFileSizeMessage");
+            const image = document.getElementById("addPreviewImage");
+            const text = document.getElementById("addPreviewText");
             const file = fileInput.files[0];
 
-            if (!file) {
-                return;
-            }
-
-            urlInput.value = "";
-
-            urlInput.disabled = true;
+            if (!file) return;
 
             message.classList.add("hidden");
+
+            if (file.size > 2 * 1024 * 1024) {
+                fileInput.value = "";
+                image.src = "";
+                image.classList.add("hidden");
+                text.classList.remove("hidden");
+                message.textContent = "Ukuran foto lebih dari 2 MB. Pilih foto maksimal 2 MB.";
+                message.classList.remove("hidden");
+                return;
+            }
 
             const reader = new FileReader();
-
             reader.onload = function(event) {
                 image.src = event.target.result;
-
-                image.classList.remove(
-                    "hidden",
-                );
-
+                image.classList.remove("hidden");
                 text.classList.add("hidden");
             };
-
             reader.readAsDataURL(file);
-        }
-
-        /* =====================================================
-               TAMBAH - URL
-            ====================================================== */
-
-        function handleAddUrl() {
-            const fileInput =
-                document.getElementById(
-                    "addImageFile",
-                );
-
-            const urlInput =
-                document.getElementById(
-                    "addImageUrl",
-                );
-
-            const message =
-                document.getElementById(
-                    "addImageMessage",
-                );
-
-            const image =
-                document.getElementById(
-                    "addPreviewImage",
-                );
-
-            const text =
-                document.getElementById(
-                    "addPreviewText",
-                );
-
-            const url = urlInput.value.trim();
-
-            if (!url) {
-                fileInput.disabled = false;
-
-                message.classList.add("hidden");
-
-                image.classList.add("hidden");
-
-                text.classList.remove("hidden");
-
-                image.src = "";
-
-                return;
-            }
-
-            fileInput.value = "";
-
-            fileInput.disabled = true;
-
-            message.classList.add("hidden");
-
-            image.onload = function() {
-                image.classList.remove(
-                    "hidden",
-                );
-
-                text.classList.add("hidden");
-            };
-
-            image.onerror = function() {
-                image.classList.add("hidden");
-
-                text.classList.remove("hidden");
-            };
-
-            image.src = url;
         }
 
         /* =====================================================
@@ -927,11 +792,6 @@
             const imageFile =
                 document.getElementById(
                     "updateImageFile",
-                );
-
-            const imageUrl =
-                document.getElementById(
-                    "updateImageUrl",
                 );
 
             const previewImage =
@@ -1020,27 +880,9 @@
             /* RESET FILE */
             imageFile.value = "";
 
-            /* RESET URL */
-            imageUrl.value = "";
-
-            /* GAMBAR LAMA */
+            /* GAMBAR LAMA: hanya path file lokal di storage */
             if (promotion.image_path) {
-                if (
-                    promotion.image_path.startsWith(
-                        "http://",
-                    ) ||
-                    promotion.image_path.startsWith(
-                        "https://",
-                    )
-                ) {
-                    imageUrl.value =
-                        promotion.image_path;
-
-                    previewImage.src =
-                        promotion.image_path;
-                } else {
-                    previewImage.src = `/storage/${promotion.image_path}`;
-                }
+                previewImage.src = `/storage/${promotion.image_path}`;
 
                 previewImage.classList.remove(
                     "hidden",
@@ -1063,8 +905,6 @@
 
             /* INPUT GAMBAR */
             imageFile.disabled = false;
-
-            imageUrl.disabled = false;
 
             /* BUKA MODAL */
             modal.classList.remove("hidden");
@@ -1188,83 +1028,30 @@
             ====================================================== */
 
         function handleUpdateFile() {
-            const fileInput =
-                document.getElementById(
-                    "updateImageFile",
-                );
-
-            const image =
-                document.getElementById(
-                    "updatePreviewImage",
-                );
-
-            const text =
-                document.getElementById(
-                    "updatePreviewText",
-                );
-
+            const fileInput = document.getElementById("updateImageFile");
+            const message = document.getElementById("updateFileSizeMessage");
+            const image = document.getElementById("updatePreviewImage");
+            const text = document.getElementById("updatePreviewText");
             const file = fileInput.files[0];
 
-            if (!file) {
+            if (!file) return;
+
+            message.classList.add("hidden");
+
+            if (file.size > 2 * 1024 * 1024) {
+                fileInput.value = "";
+                message.textContent = "Ukuran foto lebih dari 2 MB. Pilih foto maksimal 2 MB.";
+                message.classList.remove("hidden");
                 return;
             }
 
             const reader = new FileReader();
-
             reader.onload = function(event) {
                 image.src = event.target.result;
-
-                image.classList.remove(
-                    "hidden",
-                );
-
+                image.classList.remove("hidden");
                 text.classList.add("hidden");
             };
-
             reader.readAsDataURL(file);
-        }
-
-        /* =====================================================
-               UPDATE - URL
-            ====================================================== */
-
-        function handleUpdateUrl() {
-            const urlInput =
-                document.getElementById(
-                    "updateImageUrl",
-                );
-
-            const image =
-                document.getElementById(
-                    "updatePreviewImage",
-                );
-
-            const text =
-                document.getElementById(
-                    "updatePreviewText",
-                );
-
-            const url = urlInput.value.trim();
-
-            if (!url) {
-                return;
-            }
-
-            image.onload = function() {
-                image.classList.remove(
-                    "hidden",
-                );
-
-                text.classList.add("hidden");
-            };
-
-            image.onerror = function() {
-                image.classList.add("hidden");
-
-                text.classList.remove("hidden");
-            };
-
-            image.src = url;
         }
     </script>
 

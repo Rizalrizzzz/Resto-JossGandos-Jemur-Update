@@ -8,21 +8,6 @@ use Illuminate\Support\Facades\Storage;
 
 class OrderButtonController extends Controller
 {
-    public function index()
-    {
-        if (! session()->has('account_id')) {
-            return redirect()
-                ->route('login.form')
-                ->with(
-                    'error',
-                    'Session anda telah habis, silakan login ulang.'
-                );
-        }
-
-        $orderButtons = OrderButton::orderBy('id')->get();
-
-        return view('order-buttons.index', compact('orderButtons'));
-    }
 
     public function update(Request $request, OrderButton $orderButton)
     {
@@ -35,108 +20,105 @@ class OrderButtonController extends Controller
                 );
         }
 
+        // Tidak menerima URL gambar lagi. Gambar hanya dapat diganti lewat Choose File.
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'link' => 'required|string|max:500',
-            'icon_url' => 'nullable|string|max:500',
             'icon_file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+        ], [
+            'icon_file.image' => 'File ikon harus berupa gambar.',
+            'icon_file.mimes' => 'Format gambar harus JPG, JPEG, PNG, atau WebP.',
+            'icon_file.max' => 'Ukuran gambar maksimal 2 MB.',
         ]);
 
-        // Simpan judul dan link baru
+        $oldIcon = $orderButton->icon;
+        $newIconPath = null;
+
         $orderButton->title = $validated['title'];
         $orderButton->link = $validated['link'];
 
-        /*
-        |--------------------------------------------------------------------------
-        | JIKA ADMIN UPLOAD GAMBAR BARU
-        |--------------------------------------------------------------------------
-        */
+        // Jika admin memilih file baru, simpan dahulu; gambar lama jangan dihapus dulu.
         if ($request->hasFile('icon_file')) {
+            $newIconPath = $request->file('icon_file')->store('order-buttons', 'public');
 
-            // Simpan path gambar lama
-            $oldIcon = trim($orderButton->icon ?? '');
-
-            /*
-            | Hanya hapus jika gambar lama adalah file lokal/storage.
-            | URL eksternal tidak perlu dihapus.
-            */
-            if (
-                $oldIcon !== '' &&
-                ! filter_var($oldIcon, FILTER_VALIDATE_URL)
-            ) {
-                $oldIcon = ltrim($oldIcon, '/');
-
-                // Jika database menyimpan "storage/..."
-                if (str_starts_with($oldIcon, 'storage/')) {
-                    $oldIcon = substr($oldIcon, 8);
-                }
-
-                // Hapus file lama dari storage/app/public
-                if (
-                    Storage::disk('public')->exists($oldIcon)
-                ) {
-                    Storage::disk('public')->delete($oldIcon);
-                }
+            if (! $newIconPath) {
+                return back()
+                    ->withErrors([
+                        'icon_file' => 'Gambar gagal disimpan. Silakan coba lagi.',
+                    ])
+                    ->withInput();
             }
 
-            /*
-            | Upload file baru
-            */
-            $newIcon = $request
-                ->file('icon_file')
-                ->store('order-buttons', 'public');
-
-            // Ganti path lama dengan path baru
-            $orderButton->icon = $newIcon;
+            $orderButton->icon = $newIconPath;
         }
+        // Jika tidak memilih file baru, icon lama tetap digunakan.
 
-        /*
-        |--------------------------------------------------------------------------
-        | JIKA ADMIN MENGGUNAKAN URL GAMBAR
-        |--------------------------------------------------------------------------
-        */
-        elseif (! empty($validated['icon_url'])) {
-
-            // Simpan path gambar lama
-            $oldIcon = trim($orderButton->icon ?? '');
-
-            /*
-            | Kalau gambar lama merupakan file upload,
-            | hapus karena sekarang diganti URL.
-            */
-            if (
-                $oldIcon !== '' &&
-                ! filter_var($oldIcon, FILTER_VALIDATE_URL)
-            ) {
-                $oldIcon = ltrim($oldIcon, '/');
-
-                if (str_starts_with($oldIcon, 'storage/')) {
-                    $oldIcon = substr($oldIcon, 8);
-                }
-
-                if (
-                    Storage::disk('public')->exists($oldIcon)
-                ) {
-                    Storage::disk('public')->delete($oldIcon);
-                }
+        try {
+            $orderButton->save();
+        } catch (\Throwable $e) {
+            // Bersihkan file baru jika update database gagal.
+            if ($newIconPath) {
+                Storage::disk('public')->delete($newIconPath);
             }
 
-            // Simpan URL gambar baru
-            $orderButton->icon = $validated['icon_url'];
+            throw $e;
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | SIMPAN PERUBAHAN
-        |--------------------------------------------------------------------------
-        */
-        $orderButton->save();
+        // Hapus gambar lama setelah perubahan berhasil dan hanya jika tidak dipakai data lain.
+        if ($newIconPath && $oldIcon && $oldIcon !== $newIconPath) {
+            $this->deleteOldIconIfUnused($oldIcon, $orderButton->id);
+        }
 
         return redirect()
             ->back()
-            ->with(
-                'success',
-                'Order Now berhasil diperbarui.'
-            );
+            ->with('success', 'Order Now berhasil diperbarui.');
+    }
+
+    /**
+     * Normalisasi hanya file upload dalam folder order-buttons.
+     * URL eksternal dan file bawaan public/img tidak akan pernah dihapus.
+     */
+    private function normalizeLocalOrderIcon(?string $value): ?string
+    {
+        $path = trim((string) $value);
+
+        if ($path === '' || filter_var($path, FILTER_VALIDATE_URL)) {
+            return null;
+        }
+
+        $path = ltrim($path, '/');
+
+        if (str_starts_with($path, 'storage/')) {
+            $path = substr($path, strlen('storage/'));
+        } elseif (str_starts_with($path, 'public/')) {
+            $path = substr($path, strlen('public/'));
+        }
+
+        if (str_contains($path, '..') || ! str_starts_with($path, 'order-buttons/')) {
+            return null;
+        }
+
+        return $path;
+    }
+
+    /** Hapus file lama hanya jika tidak lagi digunakan tombol Order Now lain. */
+    private function deleteOldIconIfUnused(string $oldIcon, int $currentId): void
+    {
+        $localPath = $this->normalizeLocalOrderIcon($oldIcon);
+
+        if (! $localPath || ! Storage::disk('public')->exists($localPath)) {
+            return;
+        }
+
+        $isStillUsed = OrderButton::query()
+            ->where('id', '!=', $currentId)
+            ->get(['icon'])
+            ->contains(function ($item) use ($localPath) {
+                return $this->normalizeLocalOrderIcon($item->icon) === $localPath;
+            });
+
+        if (! $isStillUsed) {
+            Storage::disk('public')->delete($localPath);
+        }
     }
 }

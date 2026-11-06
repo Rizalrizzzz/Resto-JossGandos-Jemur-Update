@@ -1,4 +1,35 @@
 <x-layout>
+    @php
+        // Semua gambar konten pada halaman Reservation harus memakai path lokal.
+        $resolveLocalImageUrl = static function ($value) {
+            if (!is_string($value) || trim($value) === '') {
+                return null;
+            }
+
+            $path = ltrim(trim($value), '/');
+
+            // Normalisasi path lama yang mungkin tersimpan dengan prefix public/.
+            if (str_starts_with($path, 'public/storage/')) {
+                $path = substr($path, 7);
+            } elseif (str_starts_with($path, 'public/img/')) {
+                $path = substr($path, 7);
+            } elseif (str_starts_with($path, 'public/')) {
+                $path = 'storage/' . substr($path, 7);
+            }
+
+            if (str_starts_with($path, 'storage/')) {
+                return asset($path);
+            }
+
+            // File aset yang memang berada di folder public/img.
+            if (str_starts_with($path, 'img/')) {
+                return asset($path);
+            }
+
+            // Default upload berada di storage/app/public.
+            return asset('storage/' . $path);
+        };
+    @endphp
     <style>
         /* CSS untuk Hide Scrollbar di Main Container */
 
@@ -374,13 +405,20 @@
             class="relative z-20 pt-8 sm:pt-10 pb-14 sm:pb-20 fade-section opacity-0 translate-y-10 transition-all duration-1000">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div
-                    class="reservation-mobile-hero relative w-full h-[520px] sm:h-[420px] lg:h-[460px] overflow-hidden rounded-[1.5rem] sm:rounded-[2rem] shadow-[0_12px_30px_rgba(0,0,0,0.20)]">
+                    class="reservation-mobile-hero relative w-full h-auto min-h-[520px] sm:min-h-[420px] lg:h-[460px] lg:min-h-0 overflow-hidden rounded-[1.5rem] sm:rounded-[2rem] shadow-[0_12px_30px_rgba(0,0,0,0.20)]">
                     {{-- =====================================================
                  BACKGROUND FOTO
             ====================================================== --}}
 
-                    <img src="{{ $setting->hero_image ?? '' }}" alt="Resto Joss Gandos"
-                        class="absolute inset-0 w-full h-full object-cover" />
+                    @php
+                        $heroImageUrl = $resolveLocalImageUrl($setting->hero_image ?? null);
+                    @endphp
+                    @if ($heroImageUrl)
+                        <img src="{{ $heroImageUrl }}" alt="Resto Joss Gandos"
+                            class="absolute inset-0 w-full h-full object-cover" />
+                    @else
+                        <div class="absolute inset-0 bg-gradient-to-br from-red-950 via-neutral-800 to-amber-900"></div>
+                    @endif
 
                     {{-- =====================================================
                  OVERLAY DASAR
@@ -399,7 +437,7 @@
             ====================================================== --}}
 
                     <div
-                        class="reservation-mobile-content reservation-hero-content relative h-full w-full flex items-center">
+                        class="reservation-mobile-content reservation-hero-content relative w-full min-h-[520px] sm:min-h-[420px] lg:min-h-0 lg:h-full flex items-center">
                         <div
                             class="w-full grid lg:grid-cols-[1.15fr_.85fr] gap-6 lg:gap-10 items-center px-6 sm:px-8 lg:px-12 py-8 sm:py-0">
                             {{-- =================================================
@@ -507,13 +545,7 @@
                             @foreach ($steps as $step)
                                 @php
 
-                                    $stepIcon = null;
-
-                                    if ($step->icon) {
-                                        $stepIcon = filter_var($step->icon, FILTER_VALIDATE_URL)
-                                            ? $step->icon
-                                            : asset('storage/' . ltrim($step->icon, '/'));
-                                    }
+                                    $stepIcon = $resolveLocalImageUrl($step->icon ?? null);
 
                                 @endphp
 
@@ -606,12 +638,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 @foreach ($terms as $term)
                     @php
-                        $termIcon = null;
-                        if ($term->icon) {
-                            $termIcon = filter_var($term->icon, FILTER_VALIDATE_URL)
-                                ? $term->icon
-                                : asset('storage/' . ltrim($term->icon, '/'));
-                        }
+                        $termIcon = $resolveLocalImageUrl($term->icon ?? null);
                     @endphp
                     <div
                         class="relative bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-center hover:shadow-md transition-all duration-300 {{ $loop->iteration > 4 ? 'hidden extra-term' : '' }}">
@@ -696,13 +723,7 @@
                     @foreach ($areas->take(3) as $area)
                         @php
 
-                            $areaImage = null;
-
-                            if ($area->image) {
-                                $areaImage = filter_var($area->image, FILTER_VALIDATE_URL)
-                                    ? $area->image
-                                    : asset('storage/' . ltrim($area->image, '/'));
-                            }
+                            $areaImage = $resolveLocalImageUrl($area->image ?? null);
 
                         @endphp
 
@@ -909,7 +930,7 @@
                                     rel="noopener noreferrer" aria-label="TikTok"
                                     class="w-10 h-10 rounded-full bg-gray-100 text-gray-900 flex items-center justify-center">
 
-                                    <img src="{{ asset('storage/order-buttons/tiktok.svg') }}" alt="TikTok"
+                                    <img src="{{ url('/storage/order-buttons/tiktok.svg') }}" alt="TikTok"
                                         class="w-5 h-5 object-contain">
                                 </a>
 
@@ -935,8 +956,17 @@
 
                         <div
                             class="relative w-full h-[240px] md:h-[280px] overflow-hidden rounded-[1.5rem] shadow-lg bg-gray-100">
-                            <img src="{{ $setting->location_image ?? '' }}" alt="Resto Joss Gandos Jemursari"
-                                class="w-full h-full object-cover" />
+                            @php
+                                $locationImageUrl = $resolveLocalImageUrl($setting->location_image ?? null);
+                            @endphp
+                            @if ($locationImageUrl)
+                                <img src="{{ $locationImageUrl }}" alt="Resto Joss Gandos Jemursari"
+                                    class="w-full h-full object-cover" />
+                            @else
+                                <div class="w-full h-full flex items-center justify-center text-sm text-gray-400">
+                                    Foto lokasi belum tersedia
+                                </div>
+                            @endif
 
                             <div
                                 class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent">
@@ -969,17 +999,10 @@
         </section>
 
         @php
-            $ctaBackground = $setting->cta_background_image ?? '';
-            $ctaBackgroundUrl = '';
-
-            if (\Illuminate\Support\Str::startsWith($ctaBackground, ['http://', 'https://'])) {
-                $ctaBackgroundUrl = $ctaBackground;
-            } elseif ($ctaBackground) {
-                $ctaBackgroundUrl = asset('storage/' . ltrim($ctaBackground, '/'));
-            }
+            $ctaBackgroundUrl = $resolveLocalImageUrl($setting->cta_background_image ?? null);
         @endphp
 
-        <section class="fade-section opacity-0 translate-y-10 transition-all duration-1000 delay-100">
+        <section class="fade-section opacity-0 translate-y-10 transition-all duration-1000 delay-100 pb-16 md:pb-24">
             <div
                 class="relative w-full rounded-[3rem] overflow-hidden shadow-2xl group cursor-pointer h-[480px] md:h-[450px]">
                 <div class="absolute inset-0 z-0">

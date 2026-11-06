@@ -8,85 +8,82 @@ use App\Models\MenuSetting;
 use App\Models\Promotion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class MenuController extends Controller
 {
-    /*
-    |--------------------------------------------------------------------------
-    | HALAMAN ADMIN MENU
-    |--------------------------------------------------------------------------
-    */
+    /**
+     * Halaman admin menu.
+     */
     public function index()
     {
-        // Ambil semua menu
         $menus = Menu::latest()->get();
-
-        // Ambil pengaturan halaman menu
-        // Karena menu_settings hanya memiliki 1 record,
-        // kita gunakan first()
         $menuSetting = MenuSetting::first();
 
-        return view('menu-admin', compact(
-            'menus',
-            'menuSetting'
-        ));
+        return view('menu-admin', compact('menus', 'menuSetting'));
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | UPDATE PENGATURAN HALAMAN MENU
-    |--------------------------------------------------------------------------
-    */
+    /**
+     * Update pengaturan halaman Menu.
+     * Form pengaturan dibuat terpisah, jadi hanya field yang dikirim yang diubah.
+     */
     public function updateSettings(Request $request)
     {
         $request->validate([
+            // Hero: upload file, bukan URL gambar
             'hero_badge' => 'nullable|string|max:100',
             'hero_title' => 'nullable|string|max:255',
             'hero_description' => 'nullable|string',
-            'hero_image' => 'nullable|url|max:2048',
+            'hero_image_file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
 
-            // JUDUL SECTION MENU
+            // Judul section menu
             'promo_title' => 'nullable|string|max:255',
             'recommended_title' => 'nullable|string|max:255',
             'menu_title' => 'nullable|string|max:255',
 
-            // PAKET & LAYANAN
+            // Paket & layanan
             'package_title' => 'nullable|string|max:255',
             'package_description' => 'nullable|string',
 
-            // PACKAGE MENU
-            'package_menu_icon_url' => 'nullable|url|max:2048',
+            // Ikon paket: upload file saja
             'package_menu_icon_file' => 'nullable|mimes:jpg,jpeg,png,webp,svg|max:1024',
             'package_menu_title' => 'nullable|string|max:255',
             'package_menu_description' => 'nullable|string',
 
-            // BOX PACKAGE
-            'box_package_icon_url' => 'nullable|url|max:2048',
             'box_package_icon_file' => 'nullable|mimes:jpg,jpeg,png,webp,svg|max:1024',
             'box_package_title' => 'nullable|string|max:255',
             'box_package_description' => 'nullable|string',
 
-            // WEDDING PACKAGE
-            'wedding_package_icon_url' => 'nullable|url|max:2048',
             'wedding_package_icon_file' => 'nullable|mimes:jpg,jpeg,png,webp,svg|max:1024',
             'wedding_package_title' => 'nullable|string|max:255',
             'wedding_package_description' => 'nullable|string',
 
-            // CTA MENU LENGKAP
-            'cta_image' => 'nullable|url|max:2048',
+            // Menu Lengkap: foto upload, link Google Drive tetap berupa URL
+            'cta_image_file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'cta_badge' => 'nullable|string|max:100',
             'cta_title' => 'nullable|string|max:255',
             'cta_description' => 'nullable|string',
             'cta_link' => 'nullable|url|max:2048',
+        ], [
+            'hero_image_file.image' => 'File Hero harus berupa gambar.',
+            'hero_image_file.mimes' => 'Foto Hero harus JPG, JPEG, PNG, atau WebP.',
+            'hero_image_file.max' => 'Ukuran foto Hero maksimal 2 MB.',
+            'cta_image_file.image' => 'File Menu Lengkap harus berupa gambar.',
+            'cta_image_file.mimes' => 'Foto Menu Lengkap harus JPG, JPEG, PNG, atau WebP.',
+            'cta_image_file.max' => 'Ukuran foto Menu Lengkap maksimal 2 MB.',
         ]);
 
-        // Ambil data settings yang sudah ada
         $menuSetting = MenuSetting::first();
 
-        // Jika belum ada, buat record baru
         if (! $menuSetting) {
-            $menuSetting = new MenuSetting;
+            $menuSetting = new MenuSetting();
         }
+
+        // Simpan nilai gambar lama untuk dibersihkan setelah data baru tersimpan.
+        $oldImageValues = [
+            $menuSetting->hero_image,
+            $menuSetting->cta_image,
+        ];
 
         $oldIconValues = [
             $menuSetting->package_menu_icon,
@@ -94,42 +91,28 @@ class MenuController extends Controller
             $menuSetting->wedding_package_icon,
         ];
 
-        /*
-        |--------------------------------------------------------------------------
-        | FIELD TEKS
-        |--------------------------------------------------------------------------
-        */
+        // Field teks. Gambar tidak dimasukkan ke daftar ini karena sekarang memakai upload.
         $fields = [
-            // HERO
             'hero_badge',
             'hero_title',
             'hero_description',
-            'hero_image',
 
-            // JUDUL SECTION MENU
             'promo_title',
             'recommended_title',
             'menu_title',
 
-            // PAKET & LAYANAN
             'package_title',
             'package_description',
 
-            // PACKAGE MENU
             'package_menu_title',
             'package_menu_description',
 
-            // BOX PACKAGE
             'box_package_title',
             'box_package_description',
 
-            // WEDDING PACKAGE
             'wedding_package_title',
             'wedding_package_description',
 
-            
-            // CTA MENU LENGKAP
-            'cta_image',
             'cta_badge',
             'cta_title',
             'cta_description',
@@ -137,180 +120,149 @@ class MenuController extends Controller
         ];
 
         foreach ($fields as $field) {
-            if ($request->has($field)) {
+            if ($request->exists($field)) {
                 $menuSetting->$field = $request->input($field);
             }
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | PACKAGE MENU ICON
-        |--------------------------------------------------------------------------
-        */
+        // Upload gambar Hero Section. Jika tidak memilih file baru, gambar lama tetap dipakai.
+        if ($request->hasFile('hero_image_file')) {
+            $menuSetting->hero_image = $request->file('hero_image_file')
+                ->store('menu-images', 'public');
+        }
 
-        // Jika upload ikon baru
+        // Upload gambar Menu Lengkap. Jika tidak memilih file baru, gambar lama tetap dipakai.
+        if ($request->hasFile('cta_image_file')) {
+            $menuSetting->cta_image = $request->file('cta_image_file')
+                ->store('menu-images', 'public');
+        }
+
+        // Upload ikon Package Menu.
         if ($request->hasFile('package_menu_icon_file')) {
-
-            $path = $request->file('package_menu_icon_file')
+            $menuSetting->package_menu_icon = $request->file('package_menu_icon_file')
                 ->store('menu-icons', 'public');
-
-            $menuSetting->package_menu_icon = $path;
-
-            // Jika tidak upload file tetapi menggunakan URL
-        } elseif ($request->filled('package_menu_icon_url')) {
-
-            $menuSetting->package_menu_icon =
-                $request->input('package_menu_icon_url');
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | BOX PACKAGE ICON
-        |--------------------------------------------------------------------------
-        */
-
+        // Upload ikon Box Package.
         if ($request->hasFile('box_package_icon_file')) {
-
-            $path = $request->file('box_package_icon_file')
+            $menuSetting->box_package_icon = $request->file('box_package_icon_file')
                 ->store('menu-icons', 'public');
-
-            $menuSetting->box_package_icon = $path;
-
-        } elseif ($request->filled('box_package_icon_url')) {
-
-            $menuSetting->box_package_icon =
-                $request->input('box_package_icon_url');
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | WEDDING PACKAGE ICON
-        |--------------------------------------------------------------------------
-        */
-
+        // Upload ikon Wedding Package.
         if ($request->hasFile('wedding_package_icon_file')) {
-
-            $path = $request->file('wedding_package_icon_file')
+            $menuSetting->wedding_package_icon = $request->file('wedding_package_icon_file')
                 ->store('menu-icons', 'public');
-
-           $menuSetting->wedding_package_icon = $path;
-
-        } elseif ($request->filled('wedding_package_icon_url')) {
-
-            $menuSetting->wedding_package_icon =
-                $request->input('wedding_package_icon_url');
         }
 
-        // Simpan perubahan
         $menuSetting->save();
 
-        // Hapus file ikon lokal lama yang sudah tidak dipakai
-$currentIconValues = [
-    $menuSetting->package_menu_icon,
-    $menuSetting->box_package_icon,
-    $menuSetting->wedding_package_icon,
-];
+        // Hapus gambar lama yang sudah tidak digunakan, hanya jika berasal dari menu-images.
+        $currentImageValues = [
+            $menuSetting->hero_image,
+            $menuSetting->cta_image,
+        ];
 
-foreach ($oldIconValues as $oldIcon) {
-    if (
-        empty($oldIcon) ||
-        \Illuminate\Support\Str::startsWith($oldIcon, ['http://', 'https://'])
-    ) {
-        continue;
-    }
+        $normalizeLocalPath = static function ($path) {
+            $path = trim((string) $path);
 
-    $oldPath = ltrim(
-        preg_replace('#^/?storage/#', '', $oldIcon),
-        '/'
-    );
+            if ($path === '' || preg_match('#^https?://#i', $path)) {
+                return null;
+            }
 
-    // Hanya proses file ikon di folder menu-icons
-    if (!\Illuminate\Support\Str::startsWith($oldPath, 'menu-icons/')) {
-        continue;
-    }
+            return ltrim(preg_replace('#^/?storage/#i', '', $path), '/');
+        };
 
-    $stillUsed = false;
+        foreach ($oldImageValues as $oldImage) {
+            $oldPath = $normalizeLocalPath($oldImage);
 
-    foreach ($currentIconValues as $currentIcon) {
-        if (empty($currentIcon)) {
-            continue;
+            if (! $oldPath || ! Str::startsWith($oldPath, 'menu-images/')) {
+                continue;
+            }
+
+            $stillUsed = false;
+
+            foreach ($currentImageValues as $currentImage) {
+                if ($normalizeLocalPath($currentImage) === $oldPath) {
+                    $stillUsed = true;
+                    break;
+                }
+            }
+
+            if (! $stillUsed) {
+                Storage::disk('public')->delete($oldPath);
+            }
         }
 
-        $currentPath = ltrim(
-            preg_replace('#^/?storage/#', '', $currentIcon),
-            '/'
-        );
+        // Hapus ikon lama yang tidak digunakan, hanya dari folder menu-icons.
+        $currentIconValues = [
+            $menuSetting->package_menu_icon,
+            $menuSetting->box_package_icon,
+            $menuSetting->wedding_package_icon,
+        ];
 
-        if ($currentPath === $oldPath) {
-            $stillUsed = true;
-            break;
+        foreach ($oldIconValues as $oldIcon) {
+            $oldPath = $normalizeLocalPath($oldIcon);
+
+            if (! $oldPath || ! Str::startsWith($oldPath, 'menu-icons/')) {
+                continue;
+            }
+
+            $stillUsed = false;
+
+            foreach ($currentIconValues as $currentIcon) {
+                if ($normalizeLocalPath($currentIcon) === $oldPath) {
+                    $stillUsed = true;
+                    break;
+                }
+            }
+
+            if (! $stillUsed) {
+                Storage::disk('public')->delete($oldPath);
+            }
         }
+
+        return back()->with('success', 'Pengaturan halaman Menu berhasil diperbarui.');
     }
 
-    if (!$stillUsed) {
-        Storage::disk('public')->delete($oldPath);
-    }
-}
-
-        return back()->with(
-            'success',
-            'Pengaturan halaman Menu berhasil diperbarui.'
-        );
-
-
-
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | HALAMAN PUBLIC MENU
-    |--------------------------------------------------------------------------
-    */
+    /**
+     * Halaman publik Menu.
+     */
     public function publicIndex()
     {
-        // Pengaturan halaman Menu
         $menuSetting = MenuSetting::first();
 
-        // Menu rekomendasi untuk carousel
         $carouselMenus = Menu::where('is_recommended', true)
             ->orderBy('created_at', 'asc')
             ->get();
 
-        // Menu rekomendasi
         $specialMenus = Menu::where('is_recommended', true)
             ->orderBy('created_at', 'asc')
             ->get();
 
-        // Menu berdasarkan kategori
         $menus = Menu::orderBy('created_at', 'asc')
             ->get()
             ->groupBy('category');
 
-        // Promosi yang tampil di Menu
         $now = now('Asia/Jakarta');
 
         $promotions = Promotion::where('is_active', true)
             ->where(function ($query) use ($now) {
-
-                // Promosi biasa: langsung tampil jika Aktif
                 $query->where('is_home_popup', false)
-
-                    // Promosi Home: tampil di Menu mulai dari jadwal tayang
                     ->orWhere(function ($query) use ($now) {
                         $query->where('is_home_popup', true)
                             ->whereNotNull('home_start_at')
                             ->where('home_start_at', '<=', $now);
                     });
-
             })
             ->orderBy('sort_order', 'asc')
             ->orderByDesc('created_at')
             ->get();
 
         $menuPreviews = MenuPreview::where('is_active', true)
-        ->orderBy('sort_order', 'asc')
-        ->orderBy('id', 'asc')
-        ->get();
+            ->orderBy('sort_order', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
 
         return view('menu', compact(
             'carouselMenus',
@@ -320,53 +272,28 @@ foreach ($oldIconValues as $oldIcon) {
             'menuSetting',
             'menuPreviews'
         ));
-
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | TAMBAH MENU
-    |--------------------------------------------------------------------------
-    */
+    /**
+     * Tambah menu menggunakan upload foto.
+     */
     public function store(Request $request)
     {
         $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'price' => 'nullable|numeric|min:0',
+            'price' => 'required|numeric|min:0',
             'category' => 'required|in:makanan,minuman,snack',
             'is_recommended' => 'nullable|boolean',
-
-            // Upload maksimal 1 MB
-            'image_file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:1024',
-
-            // Atau gunakan URL
-            'image_path' => 'nullable|url|max:2048',
+            'image_file' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
         ], [
-            'image_file.max' => 'Ukuran file lebih dari 1 MB. Harap kompres gambar terlebih dahulu hingga maksimal 1 MB.',
+            'image_file.required' => 'Silakan pilih foto menu.',
+            'image_file.image' => 'File harus berupa gambar.',
+            'image_file.mimes' => 'Foto menu harus JPG, JPEG, PNG, atau WebP.',
+            'image_file.max' => 'Ukuran foto menu maksimal 2 MB.',
         ]);
 
-        // Wajib memilih upload file atau URL
-        if (! $request->hasFile('image_file') && ! $request->filled('image_path')) {
-            return back()
-                ->withErrors([
-                    'image_file' => 'Silakan upload foto atau masukkan URL foto.',
-                ])
-                ->withInput();
-        }
-
-        // Tentukan sumber gambar
-        if ($request->hasFile('image_file')) {
-
-            $path = $request->file('image_file')
-                ->store('menus', 'public');
-
-            $imagePath = $path;
-
-        } else {
-
-            $imagePath = $request->image_path;
-        }
+        $imagePath = $request->file('image_file')->store('menus', 'public');
 
         Menu::create([
             'title' => $request->title,
@@ -378,183 +305,125 @@ foreach ($oldIconValues as $oldIcon) {
             'is_recommended' => $request->boolean('is_recommended'),
         ]);
 
-        return back()->with(
-            'success',
-            'Menu berhasil ditambahkan.'
+        return back()->with('success', 'Menu berhasil ditambahkan.');
+    }
+
+    /**
+     * Update menu. Foto lama tetap digunakan jika tidak upload foto baru.
+     */
+    public function update(Request $request, int $id)
+    {
+        $menu = Menu::findOrFail($id);
+        $oldImagePath = $menu->image_path;
+        $normalizedOldImagePath = ltrim(
+            preg_replace('#^/?storage/#i', '', trim((string) $oldImagePath)),
+            '/'
         );
-    }
+        $oldImageIsLocal =
+            !str_contains($normalizedOldImagePath, '..') &&
+            Str::startsWith($normalizedOldImagePath, 'menus/');
 
-    /*
-    |--------------------------------------------------------------------------
-    | UPDATE MENU
-    |--------------------------------------------------------------------------
-    */
-    public function update(Request $request, $id)
-{
-    $menu = Menu::findOrFail($id);
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'price' => 'required|numeric|min:0',
+            'category' => 'required|in:makanan,minuman,snack',
+            'is_recommended' => 'nullable|boolean',
+            // Jika gambar lama bukan path lokal yang valid, wajib unggah gambar pengganti.
+            'image_file' => ($oldImageIsLocal ? 'nullable' : 'required') . '|image|mimes:jpg,jpeg,png,webp|max:2048',
+        ], [
+            'image_file.required' => 'Silakan pilih foto menu dari perangkat.',
+            'image_file.image' => 'File harus berupa gambar.',
+            'image_file.mimes' => 'Foto menu harus JPG, JPEG, PNG, atau WebP.',
+            'image_file.max' => 'Ukuran foto menu maksimal 2 MB.',
+        ]);
 
-    $request->validate([
-        'title' => 'required|string|max:255',
-        'description' => 'nullable|string',
-        'price' => 'nullable|numeric|min:0',
-        'category' => 'required|in:makanan,minuman,snack',
-        'is_recommended' => 'nullable|boolean',
+        $imagePath = $oldImageIsLocal ? $oldImagePath : null;
 
-        // Upload maksimal 1 MB
-        'image_file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:1024',
-
-        // Atau gunakan URL
-        'image_path' => 'nullable|url|max:2048',
-    ], [
-        'image_file.max' => 'Ukuran file lebih dari 1 MB. Harap kompres gambar terlebih dahulu hingga maksimal 1 MB.',
-    ]);
-
-    // Simpan path foto lama
-    $oldImagePath = $menu->image_path;
-
-    // Foto lama tetap digunakan jika tidak memilih foto baru
-    $imagePath = $oldImagePath;
-
-    // Jika upload foto baru
-    if ($request->hasFile('image_file')) {
-        $imagePath = $request->file('image_file')
-            ->store('menus', 'public');
-
-    // Jika menggunakan URL foto baru
-    } elseif ($request->filled('image_path')) {
-        $imagePath = trim($request->input('image_path'));
-    }
-
-    // Perbarui data menu terlebih dahulu
-    $menu->update([
-        'title' => $request->title,
-        'description' => $request->description,
-        'price' => $request->price,
-        'image_path' => $imagePath,
-        'category' => $request->category,
-        'is_recommended' => $request->boolean('is_recommended'),
-    ]);
-
-    // Rapikan path agar format "storage/menus/..." dan
-    // "menus/..." bisa dikenali sebagai file yang sama.
-    $normalizeLocalPath = function ($path) {
-        $path = trim((string) $path);
-
-        // Jangan perlakukan URL sebagai file lokal
-        if (
-            $path === '' ||
-            preg_match('#^https?://#i', $path)
-        ) {
-            return null;
+        if ($request->hasFile('image_file')) {
+            $imagePath = $request->file('image_file')->store('menus', 'public');
         }
 
-        $path = preg_replace('#^/?storage/#i', '', $path);
+        $menu->update([
+            'title' => $request->title,
+            'description' => $request->description,
+            'price' => $request->price,
+            'image_path' => $imagePath,
+            'category' => $request->category,
+            'is_recommended' => $request->boolean('is_recommended'),
+        ]);
 
-        return ltrim($path, '/');
-    };
-
-    $oldLocalPath = $normalizeLocalPath($oldImagePath);
-    $newLocalPath = $normalizeLocalPath($imagePath);
-
-    // Hapus foto lama hanya jika path berubah
-    // dan file lama berada di folder menus.
-    if (
-        $oldLocalPath &&
-        $oldLocalPath !== $newLocalPath &&
-        str_starts_with($oldLocalPath, 'menus/')
-    ) {
-        // Periksa apakah foto lama masih dipakai menu lain
-        $stillUsed = Menu::where('id', '!=', $menu->id)
-            ->get(['image_path'])
-            ->contains(function ($otherMenu) use (
-                $oldLocalPath,
-                $normalizeLocalPath
-            ) {
-                return $normalizeLocalPath(
-                    $otherMenu->image_path
-                ) === $oldLocalPath;
-            });
-
-        // Hapus hanya jika tidak dipakai menu lain
-        if (! $stillUsed) {
-            Storage::disk('public')->delete($oldLocalPath);
-        }
-    }
-
-    return back()->with(
-        'success',
-        'Menu berhasil diperbarui.'
-    );
-}
-
-    /*
-    |--------------------------------------------------------------------------
-    | HAPUS MENU
-    |--------------------------------------------------------------------------
-    */
-    public function destroy($id)
-{
-    $menu = Menu::findOrFail($id);
-
-    // Simpan path foto sebelum data dihapus
-    $oldImagePath = $menu->image_path;
-
-    // Hapus data menu terlebih dahulu
-    $deleted = $menu->delete();
-
-    // Hanya lanjut jika penghapusan data berhasil
-    if ($deleted && $oldImagePath) {
-
-        // Rapikan path foto lokal
-        $normalizeLocalPath = function ($path) {
+        $normalizeLocalPath = static function ($path) {
             $path = trim((string) $path);
 
-            // Jangan hapus URL dari CDN
-            if (
-                $path === '' ||
-                preg_match('#^https?://#i', $path)
-            ) {
+            if ($path === '' || preg_match('#^https?://#i', $path)) {
                 return null;
             }
 
-            $path = preg_replace(
-                '#^/?storage/#i',
-                '',
-                $path
-            );
-
-            return ltrim($path, '/');
+            return ltrim(preg_replace('#^/?storage/#i', '', $path), '/');
         };
 
         $oldLocalPath = $normalizeLocalPath($oldImagePath);
+        $newLocalPath = $normalizeLocalPath($imagePath);
 
-        // Hanya izinkan penghapusan di folder menus
         if (
             $oldLocalPath &&
-            str_starts_with($oldLocalPath, 'menus/') &&
-            ! str_contains($oldLocalPath, '..')
+            $oldLocalPath !== $newLocalPath &&
+            Str::startsWith($oldLocalPath, 'menus/')
         ) {
-            // Periksa apakah foto masih digunakan menu lain
-            $stillUsed = Menu::get(['image_path'])
-                ->contains(function ($otherMenu) use (
-                    $normalizeLocalPath,
-                    $oldLocalPath
-                ) {
-                    return $normalizeLocalPath(
-                        $otherMenu->image_path
-                    ) === $oldLocalPath;
+            $stillUsed = Menu::where('id', '!=', $menu->id)
+                ->get(['image_path'])
+                ->contains(function ($otherMenu) use ($oldLocalPath, $normalizeLocalPath) {
+                    return $normalizeLocalPath($otherMenu->image_path) === $oldLocalPath;
                 });
 
-            // Hapus foto jika sudah tidak dipakai
             if (! $stillUsed) {
                 Storage::disk('public')->delete($oldLocalPath);
             }
         }
+
+        return back()->with('success', 'Menu berhasil diperbarui.');
     }
 
-    return back()->with(
-        'success',
-        'Menu berhasil dihapus.'
-    );
-}
+    /**
+     * Hapus menu beserta foto lokalnya jika sudah tidak dipakai.
+     */
+    public function destroy(int $id)
+    {
+        $menu = Menu::findOrFail($id);
+        $oldImagePath = $menu->image_path;
+
+        $deleted = $menu->delete();
+
+        if ($deleted && $oldImagePath) {
+            $normalizeLocalPath = static function ($path) {
+                $path = trim((string) $path);
+
+                if ($path === '' || preg_match('#^https?://#i', $path)) {
+                    return null;
+                }
+
+                return ltrim(preg_replace('#^/?storage/#i', '', $path), '/');
+            };
+
+            $oldLocalPath = $normalizeLocalPath($oldImagePath);
+
+            if (
+                $oldLocalPath &&
+                Str::startsWith($oldLocalPath, 'menus/') &&
+                ! Str::contains($oldLocalPath, '..')
+            ) {
+                $stillUsed = Menu::get(['image_path'])
+                    ->contains(function ($otherMenu) use ($normalizeLocalPath, $oldLocalPath) {
+                        return $normalizeLocalPath($otherMenu->image_path) === $oldLocalPath;
+                    });
+
+                if (! $stillUsed) {
+                    Storage::disk('public')->delete($oldLocalPath);
+                }
+            }
+        }
+
+        return back()->with('success', 'Menu berhasil dihapus.');
+    }
 }

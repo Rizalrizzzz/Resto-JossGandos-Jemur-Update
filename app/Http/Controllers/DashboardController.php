@@ -135,163 +135,82 @@ class DashboardController extends Controller
      * =============================================================
      */
    
+
 public function updateHeader(Request $request)
 {
-    // Validasi input dari admin
+    // Hanya menerima sumber video berupa file upload
     $validated = $request->validate([
-        'source_type' => 'required|in:youtube,tiktok,file',
-
-        'youtube_url' => [
-            'nullable',
-            'required_if:source_type,youtube',
-            'url',
-            'max:500',
-        ],
-
-        'tiktok_url' => [
-            'nullable',
-            'required_if:source_type,tiktok',
-            'url',
-            'max:500',
-            function ($attribute, $value, $fail) use ($request) {
-                if ($request->input('source_type') !== 'tiktok' || !$value) {
-                    return;
-                }
-
-                $host = strtolower(
-                    parse_url($value, PHP_URL_HOST) ?? ''
-                );
-
-                $path = parse_url($value, PHP_URL_PATH) ?? '';
-
-                if (!in_array($host, [
-                    'tiktok.com',
-                    'www.tiktok.com',
-                    'm.tiktok.com',
-                ], true)) {
-                    $fail('Gunakan link video dari TikTok.');
-                    return;
-                }
-
-                if (!preg_match('~/@[^/]+/video/\d+~', $path)) {
-                    $fail(
-                        'Gunakan link lengkap TikTok yang memuat ID video, bukan link pendek.'
-                    );
-                }
-            },
-        ],
+        'source_type' => 'required|in:file',
 
         'video_file' => [
             'nullable',
-            'required_if:source_type,file',
             'file',
             'mimetypes:video/mp4,video/quicktime',
-            'max:20480',
+            'max:40960', // Maksimal 40 MB
         ],
     ]);
-
-    $sourceType = $validated['source_type'];
-    $youtubeId = null;
-
-    // Ambil ID dari URL YouTube
-    if ($sourceType === 'youtube') {
-        $url = $validated['youtube_url'];
-        $host = strtolower(parse_url($url, PHP_URL_HOST) ?? '');
-        $path = parse_url($url, PHP_URL_PATH) ?? '';
-
-        parse_str(
-            parse_url($url, PHP_URL_QUERY) ?? '',
-            $query
-        );
-
-        if ($host === 'youtu.be') {
-            $youtubeId = explode('/', trim($path, '/'))[0] ?? null;
-        } else {
-            $youtubeId = $query['v'] ?? null;
-
-            if (
-                !$youtubeId &&
-                preg_match(
-                    '~/(?:embed|shorts|live|v)/([A-Za-z0-9_-]{11})(?:/|$)~',
-                    $path,
-                    $match
-                )
-            ) {
-                $youtubeId = $match[1];
-            }
-        }
-
-        // Jangan menyimpan URL jika ID video tidak ditemukan
-        if (
-            !$youtubeId ||
-            !preg_match('/^[A-Za-z0-9_-]{11}$/', $youtubeId)
-        ) {
-            return back()
-                ->withErrors([
-                    'youtube_url' =>
-                        'URL YouTube tidak valid. Masukkan link video YouTube yang lengkap.',
-                ])
-                ->withInput();
-        }
-
-        // Batasi sumber ke domain YouTube
-        $allowedYoutubeHosts = [
-            'youtube.com',
-            'www.youtube.com',
-            'm.youtube.com',
-            'youtu.be',
-            'youtube-nocookie.com',
-            'www.youtube-nocookie.com',
-        ];
-
-        if (!in_array($host, $allowedYoutubeHosts, true)) {
-            return back()
-                ->withErrors([
-                    'youtube_url' => 'Gunakan link dari YouTube.',
-                ])
-                ->withInput();
-        }
-    }
 
     // Ambil pengaturan header yang sudah tersimpan
     $header = HeaderSetting::firstOrNew();
 
-    // Simpan jenis sumber video
-    $header->video_type = $sourceType;
+    // Simpan path video lama agar dapat dihapus setelah file baru tersimpan
+    $oldVideoPath = $header->video_path;
 
-    // Jika sumber YouTube
-    if ($sourceType === 'youtube') {
-        $header->youtube_id = $youtubeId;
+    // Jika belum ada video lama dan tidak mengunggah video baru
+    if (
+        !$request->hasFile('video_file') &&
+        empty($oldVideoPath)
+    ) {
+        return back()
+            ->withErrors([
+                'video_file' => 'Silakan upload video header terlebih dahulu.',
+            ])
+            ->withInput();
     }
 
-    // Jika sumber TikTok, simpan URL lengkapnya
-    if ($sourceType === 'tiktok') {
-        $header->tiktok_url = $validated['tiktok_url'];
-    }
+    // Jika admin mengunggah video baru
+    if ($request->hasFile('video_file')) {
+        $newVideoPath = $request
+            ->file('video_file')
+            ->store('headers', 'public');
 
-    // Jika sumber upload file
-    if ($sourceType === 'file') {
-        // Hapus file lama jika ada file baru yang diunggah
-        if ($request->hasFile('video_file')) {
-            if (
-                $header->video_path &&
-                Storage::disk('public')->exists($header->video_path)
-            ) {
-                Storage::disk('public')->delete($header->video_path);
-            }
-
-            $header->video_path = $request
-                ->file('video_file')
-                ->store('headers', 'public');
+        // Pastikan proses penyimpanan menghasilkan path
+        if (!$newVideoPath) {
+            return back()
+                ->withErrors([
+                    'video_file' => 'Video gagal disimpan. Silakan coba lagi.',
+                ])
+                ->withInput();
         }
+
+        $header->video_path = $newVideoPath;
     }
 
+    // Tetapkan sumber video hanya berupa file
+    $header->video_type = 'file';
+
+    // Kosongkan referensi sumber video lama
+    $header->youtube_id = null;
+    $header->tiktok_url = null;
+
+    // Simpan pengaturan header
     $header->save();
+
+    // Hapus video lama setelah pengaturan berhasil disimpan
+    if (
+        $request->hasFile('video_file') &&
+        $oldVideoPath &&
+        $oldVideoPath !== $header->video_path &&
+        Storage::disk('public')->exists($oldVideoPath)
+    ) {
+        Storage::disk('public')->delete($oldVideoPath);
+    }
 
     return back()->with(
         'success',
         'Video Header berhasil diperbarui!'
     );
 }
+
 
 }

@@ -90,15 +90,13 @@ class ReservationController extends Controller
     public function updateSettings(Request $request)
     {
         $request->validate([
-
             // HEADER
             'hero_badge' => 'nullable|string|max:100',
             'hero_title' => 'nullable|string|max:255',
             'hero_description' => 'nullable|string',
             'hero_whatsapp_link' => 'nullable|string|max:500',
-            'hero_image' => 'nullable|url|max:2048',
             'response_time' => 'nullable|string|max:255',
-
+            'hero_image_file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
 
             // JUDUL SECTION
             'steps_title' => 'nullable|string|max:255',
@@ -106,10 +104,10 @@ class ReservationController extends Controller
             'areas_title' => 'nullable|string|max:255',
             'areas_subtitle' => 'nullable|string|max:255',
 
-            // LOKASI
+            // LOKASI & INFORMASI
             'location_name' => 'nullable|string|max:255',
             'location_subtitle' => 'nullable|string|max:255',
-            'location_image' => 'nullable|url|max:2048',
+            'location_image_file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'address' => 'nullable|string',
             'location_title' => 'nullable|string|max:255',
             'operating_hours' => 'nullable|string|max:255',
@@ -125,55 +123,44 @@ class ReservationController extends Controller
             'cta_badge' => 'nullable|string|max:100',
             'cta_title' => 'nullable|string|max:255',
             'cta_description' => 'nullable|string',
-            'cta_background_file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:1024',
-            'cta_background_url' => 'nullable|string|max:500',
+            'cta_background_file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'cta_whatsapp_link' => 'nullable|string|max:500',
+        ], [
+            'hero_image_file.max' => 'Ukuran gambar Header maksimal 2 MB.',
+            'location_image_file.max' => 'Ukuran gambar Lokasi & Informasi maksimal 2 MB.',
+            'cta_background_file.max' => 'Ukuran gambar CTA maksimal 2 MB.',
+            'hero_image_file.mimes' => 'Gambar Header harus berformat JPG, JPEG, PNG, atau WebP.',
+            'location_image_file.mimes' => 'Gambar Lokasi & Informasi harus berformat JPG, JPEG, PNG, atau WebP.',
+            'cta_background_file.mimes' => 'Gambar CTA harus berformat JPG, JPEG, PNG, atau WebP.',
         ]);
 
-        /*
-        |--------------------------------------------------------------------------
-        | AMBIL ATAU BUAT SETTING
-        |--------------------------------------------------------------------------
-        */
-
+        // Ambil atau buat data pengaturan.
         $setting = ReservationSetting::first();
-
         if (! $setting) {
             $setting = new ReservationSetting;
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | UPDATE HANYA FIELD YANG DIKIRIM
-        |--------------------------------------------------------------------------
-        */
-
+        // Hanya ubah isian teks yang dikirim oleh form tersebut.
         $allowedFields = [
             'hero_badge',
             'hero_title',
             'hero_description',
             'hero_whatsapp_link',
-            'hero_image',
             'response_time',
-
             'steps_title',
             'terms_title',
             'areas_title',
             'areas_subtitle',
-
             'location_name',
             'location_subtitle',
-            'location_image',
             'address',
             'location_title',
             'operating_hours',
             'whatsapp_number',
-
             'instagram_link',
             'facebook_link',
             'tiktok_link',
             'whatsapp_link',
-
             'cta_badge',
             'cta_title',
             'cta_description',
@@ -181,52 +168,64 @@ class ReservationController extends Controller
         ];
 
         foreach ($allowedFields as $field) {
-
             if ($request->has($field)) {
                 $setting->{$field} = $request->input($field);
             }
-
         }
 
-       
-        // CTA BACKGROUND IMAGE
-        $oldCtaImage = $setting->cta_background_image;
-        $newlyUploadedPath = null;
+        // Upload gambar hanya jika admin memilih file baru.
+        // Jika tidak memilih file, gambar lama tetap dipakai.
+        $imageUploads = [
+            'hero_image_file' => ['column' => 'hero_image', 'directory' => 'reservation/hero'],
+            'location_image_file' => ['column' => 'location_image', 'directory' => 'reservation/location'],
+            'cta_background_file' => ['column' => 'cta_background_image', 'directory' => 'reservation/cta'],
+        ];
+        $oldImages = [];
+        $newlyUploadedPaths = [];
 
-        if ($request->hasFile('cta_background_file')) {
-            $newlyUploadedPath = $request->file('cta_background_file')
-                ->store('reservation/cta', 'public');
+        foreach ($imageUploads as $inputName => $config) {
+            if (! $request->hasFile($inputName)) {
+                continue;
+            }
 
-            $setting->cta_background_image = $newlyUploadedPath;
+            $column = $config['column'];
+            $oldImages[$column] = $setting->{$column};
+            $newPath = $request->file($inputName)->store($config['directory'], 'public');
 
-        } elseif ($request->filled('cta_background_url')) {
-            $setting->cta_background_image = trim(
-                $request->input('cta_background_url')
-            );
+            if (! $newPath) {
+                foreach ($newlyUploadedPaths as $uploadedPath) {
+                    Storage::disk('public')->delete($uploadedPath);
+                }
+
+                throw new \RuntimeException('Gambar gagal disimpan. Silakan coba kembali.');
+            }
+
+            // Simpan path publik untuk gambar Header/Lokasi supaya dapat langsung dipakai
+            // oleh halaman Reservation; CTA tetap mengikuti format path lama.
+            $setting->{$column} = $inputName === 'cta_background_file'
+                ? $newPath
+                : Storage::url($newPath);
+            $newlyUploadedPaths[] = $newPath;
         }
 
-        // Simpan pengaturan terlebih dahulu.
         try {
             $setting->save();
         } catch (\Throwable $e) {
-            // Bersihkan file baru jika penyimpanan gagal.
-            if ($newlyUploadedPath) {
-                Storage::disk('public')->delete($newlyUploadedPath);
+            foreach ($newlyUploadedPaths as $uploadedPath) {
+                Storage::disk('public')->delete($uploadedPath);
             }
 
             throw $e;
         }
 
-        // Bersihkan gambar lama setelah penyimpanan berhasil.
-        if ($oldCtaImage !== $setting->cta_background_image) {
-            $this->deleteLocalFile($oldCtaImage);
+        // Hapus gambar lama setelah perubahan berhasil tersimpan.
+        foreach ($oldImages as $column => $oldPath) {
+            if ($oldPath !== $setting->{$column}) {
+                $this->deleteLocalFile($oldPath);
+            }
         }
 
-
-        return back()->with(
-            'success',
-            'Pengaturan Reservation berhasil diperbarui.'
-        );
+        return back()->with('success', 'Pengaturan Reservation berhasil diperbarui.');
     }
 
     /*
@@ -236,50 +235,47 @@ class ReservationController extends Controller
     */
 
     
-public function storeStep(Request $request)
-{
-    $request->validate([
-        'icon_file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:1024',
-        'icon_url' => 'nullable|string|max:500',
-        'title' => 'required|string|max:255',
-        'description' => 'nullable|string',
-        'sort_order' => 'nullable|integer',
-    ], [
-        'icon_file.max' => 'Ukuran ikon maksimal 1 MB.',
-    ]);
-
-    $icon = null;
-    $newlyUploadedPath = null;
-
-    if ($request->hasFile('icon_file')) {
-        $icon = $request->file('icon_file')
-            ->store('reservation/icons', 'public');
-
-        $newlyUploadedPath = $icon;
-    } elseif ($request->filled('icon_url')) {
-        $icon = trim($request->input('icon_url'));
-    }
-
-    try {
-        ReservationStep::create([
-            'icon' => $icon,
-            'title' => $request->title,
-            'description' => $request->description,
-            'sort_order' => $request->sort_order ?? 0,
+    public function storeStep(Request $request)
+    {
+        $request->validate([
+            'icon_file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'sort_order' => 'nullable|integer',
+        ], [
+            'icon_file.max' => 'Ukuran ikon maksimal 2 MB.',
+            'icon_file.mimes' => 'Ikon harus berformat JPG, JPEG, PNG, atau WebP.',
         ]);
-    } catch (\Throwable $e) {
-        if ($newlyUploadedPath) {
-            Storage::disk('public')->delete($newlyUploadedPath);
+
+        $icon = null;
+        $newlyUploadedPath = null;
+
+        if ($request->hasFile('icon_file')) {
+            $icon = $request->file('icon_file')->store('reservation/icons', 'public');
+            $newlyUploadedPath = $icon;
+
+            if (! $icon) {
+                throw new \RuntimeException('Ikon gagal disimpan. Silakan coba kembali.');
+            }
         }
 
-        throw $e;
-    }
+        try {
+            ReservationStep::create([
+                'icon' => $icon,
+                'title' => $request->title,
+                'description' => $request->description,
+                'sort_order' => $request->sort_order ?? 0,
+            ]);
+        } catch (\Throwable $e) {
+            if ($newlyUploadedPath) {
+                Storage::disk('public')->delete($newlyUploadedPath);
+            }
 
-    return back()->with(
-        'success',
-        'Cara Reservasi berhasil ditambahkan.'
-    );
-}
+            throw $e;
+        }
+
+        return back()->with('success', 'Cara Reservasi berhasil ditambahkan.');
+    }
 
 
     /*
@@ -288,57 +284,54 @@ public function storeStep(Request $request)
     |--------------------------------------------------------------------------
     */
 
-public function updateStep(Request $request, $id)
-{
-    $step = ReservationStep::findOrFail($id);
+    public function updateStep(Request $request, int $id)
+    {
+        $step = ReservationStep::findOrFail($id);
 
-    $request->validate([
-        'icon_file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:1024',
-        'icon_url' => 'nullable|string|max:500',
-        'title' => 'required|string|max:255',
-        'description' => 'nullable|string',
-        'sort_order' => 'nullable|integer',
-    ], [
-        'icon_file.max' => 'Ukuran ikon maksimal 1 MB.',
-    ]);
-
-    $oldIcon = $step->icon;
-    $icon = $oldIcon;
-    $newlyUploadedPath = null;
-
-    if ($request->hasFile('icon_file')) {
-        $icon = $request->file('icon_file')
-            ->store('reservation/icons', 'public');
-
-        $newlyUploadedPath = $icon;
-    } elseif ($request->filled('icon_url')) {
-        $icon = trim($request->input('icon_url'));
-    }
-
-    try {
-        $step->update([
-            'icon' => $icon,
-            'title' => $request->title,
-            'description' => $request->description,
-            'sort_order' => $request->sort_order ?? 0,
+        $request->validate([
+            'icon_file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'sort_order' => 'nullable|integer',
+        ], [
+            'icon_file.max' => 'Ukuran ikon maksimal 2 MB.',
+            'icon_file.mimes' => 'Ikon harus berformat JPG, JPEG, PNG, atau WebP.',
         ]);
-    } catch (\Throwable $e) {
-        if ($newlyUploadedPath) {
-            Storage::disk('public')->delete($newlyUploadedPath);
+
+        $oldIcon = $step->icon;
+        $icon = $oldIcon;
+        $newlyUploadedPath = null;
+
+        if ($request->hasFile('icon_file')) {
+            $icon = $request->file('icon_file')->store('reservation/icons', 'public');
+            $newlyUploadedPath = $icon;
+
+            if (! $icon) {
+                throw new \RuntimeException('Ikon gagal disimpan. Silakan coba kembali.');
+            }
         }
 
-        throw $e;
-    }
+        try {
+            $step->update([
+                'icon' => $icon,
+                'title' => $request->title,
+                'description' => $request->description,
+                'sort_order' => $request->sort_order ?? 0,
+            ]);
+        } catch (\Throwable $e) {
+            if ($newlyUploadedPath) {
+                Storage::disk('public')->delete($newlyUploadedPath);
+            }
 
-    if ($oldIcon !== $icon) {
-        $this->deleteLocalFile($oldIcon);
-    }
+            throw $e;
+        }
 
-    return back()->with(
-        'success',
-        'Cara Reservasi berhasil diperbarui.'
-    );
-}
+        if ($oldIcon !== $icon) {
+            $this->deleteLocalFile($oldIcon);
+        }
+
+        return back()->with('success', 'Cara Reservasi berhasil diperbarui.');
+    }
 
 
     /*
@@ -348,7 +341,7 @@ public function updateStep(Request $request, $id)
     */
 
     
-public function destroyStep($id)
+public function destroyStep(int $id)
 {
     $step = ReservationStep::findOrFail($id);
 
@@ -377,50 +370,47 @@ public function destroyStep($id)
     */
 
     
-public function storeTerm(Request $request)
-{
-    $request->validate([
-        'icon_file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:1024',
-        'icon_url' => 'nullable|string|max:500',
-        'title' => 'required|string|max:255',
-        'description' => 'nullable|string',
-        'sort_order' => 'nullable|integer',
-    ], [
-        'icon_file.max' => 'Ukuran ikon maksimal 1 MB.',
-    ]);
-
-    $icon = null;
-    $newlyUploadedPath = null;
-
-    if ($request->hasFile('icon_file')) {
-        $icon = $request->file('icon_file')
-            ->store('reservation/icons', 'public');
-
-        $newlyUploadedPath = $icon;
-    } elseif ($request->filled('icon_url')) {
-        $icon = trim($request->input('icon_url'));
-    }
-
-    try {
-        ReservationTerm::create([
-            'icon' => $icon,
-            'title' => $request->title,
-            'description' => $request->description,
-            'sort_order' => $request->sort_order ?? 0,
+    public function storeTerm(Request $request)
+    {
+        $request->validate([
+            'icon_file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'sort_order' => 'nullable|integer',
+        ], [
+            'icon_file.max' => 'Ukuran ikon maksimal 2 MB.',
+            'icon_file.mimes' => 'Ikon harus berformat JPG, JPEG, PNG, atau WebP.',
         ]);
-    } catch (\Throwable $e) {
-        if ($newlyUploadedPath) {
-            Storage::disk('public')->delete($newlyUploadedPath);
+
+        $icon = null;
+        $newlyUploadedPath = null;
+
+        if ($request->hasFile('icon_file')) {
+            $icon = $request->file('icon_file')->store('reservation/icons', 'public');
+            $newlyUploadedPath = $icon;
+
+            if (! $icon) {
+                throw new \RuntimeException('Ikon gagal disimpan. Silakan coba kembali.');
+            }
         }
 
-        throw $e;
-    }
+        try {
+            ReservationTerm::create([
+                'icon' => $icon,
+                'title' => $request->title,
+                'description' => $request->description,
+                'sort_order' => $request->sort_order ?? 0,
+            ]);
+        } catch (\Throwable $e) {
+            if ($newlyUploadedPath) {
+                Storage::disk('public')->delete($newlyUploadedPath);
+            }
 
-    return back()->with(
-        'success',
-        'Ketentuan Reservasi berhasil ditambahkan.'
-    );
-}
+            throw $e;
+        }
+
+        return back()->with('success', 'Ketentuan Reservasi berhasil ditambahkan.');
+    }
 
 
     /*
@@ -430,57 +420,54 @@ public function storeTerm(Request $request)
     */
 
     
-public function updateTerm(Request $request, $id)
-{
-    $term = ReservationTerm::findOrFail($id);
+    public function updateTerm(Request $request, int $id)
+    {
+        $term = ReservationTerm::findOrFail($id);
 
-    $request->validate([
-        'icon_file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:1024',
-        'icon_url' => 'nullable|string|max:500',
-        'title' => 'required|string|max:255',
-        'description' => 'nullable|string',
-        'sort_order' => 'nullable|integer',
-    ], [
-        'icon_file.max' => 'Ukuran ikon maksimal 1 MB.',
-    ]);
-
-    $oldIcon = $term->icon;
-    $icon = $oldIcon;
-    $newlyUploadedPath = null;
-
-    if ($request->hasFile('icon_file')) {
-        $icon = $request->file('icon_file')
-            ->store('reservation/icons', 'public');
-
-        $newlyUploadedPath = $icon;
-    } elseif ($request->filled('icon_url')) {
-        $icon = trim($request->input('icon_url'));
-    }
-
-    try {
-        $term->update([
-            'icon' => $icon,
-            'title' => $request->title,
-            'description' => $request->description,
-            'sort_order' => $request->sort_order ?? 0,
+        $request->validate([
+            'icon_file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'sort_order' => 'nullable|integer',
+        ], [
+            'icon_file.max' => 'Ukuran ikon maksimal 2 MB.',
+            'icon_file.mimes' => 'Ikon harus berformat JPG, JPEG, PNG, atau WebP.',
         ]);
-    } catch (\Throwable $e) {
-        if ($newlyUploadedPath) {
-            Storage::disk('public')->delete($newlyUploadedPath);
+
+        $oldIcon = $term->icon;
+        $icon = $oldIcon;
+        $newlyUploadedPath = null;
+
+        if ($request->hasFile('icon_file')) {
+            $icon = $request->file('icon_file')->store('reservation/icons', 'public');
+            $newlyUploadedPath = $icon;
+
+            if (! $icon) {
+                throw new \RuntimeException('Ikon gagal disimpan. Silakan coba kembali.');
+            }
         }
 
-        throw $e;
-    }
+        try {
+            $term->update([
+                'icon' => $icon,
+                'title' => $request->title,
+                'description' => $request->description,
+                'sort_order' => $request->sort_order ?? 0,
+            ]);
+        } catch (\Throwable $e) {
+            if ($newlyUploadedPath) {
+                Storage::disk('public')->delete($newlyUploadedPath);
+            }
 
-    if ($oldIcon !== $icon) {
-        $this->deleteLocalFile($oldIcon);
-    }
+            throw $e;
+        }
 
-    return back()->with(
-        'success',
-        'Ketentuan Reservasi berhasil diperbarui.'
-    );
-}
+        if ($oldIcon !== $icon) {
+            $this->deleteLocalFile($oldIcon);
+        }
+
+        return back()->with('success', 'Ketentuan Reservasi berhasil diperbarui.');
+    }
 
 
     /*
@@ -490,7 +477,7 @@ public function updateTerm(Request $request, $id)
     */
 
     
-public function destroyTerm($id)
+public function destroyTerm(int $id)
 {
     $term = ReservationTerm::findOrFail($id);
 
@@ -524,35 +511,57 @@ public function destroyTerm($id)
     */
 
     
-public function updateArea(Request $request, $id)
-{
-    $area = ReservationArea::findOrFail($id);
+    public function updateArea(Request $request, int $id)
+    {
+        $area = ReservationArea::findOrFail($id);
 
-    $request->validate([
-        'image' => 'nullable|string|max:500',
-        'title' => 'required|string|max:255',
-        'description' => 'nullable|string',
-        'sort_order' => 'nullable|integer',
-    ]);
+        $request->validate([
+            'image_file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'sort_order' => 'nullable|integer',
+        ], [
+            'image_file.max' => 'Ukuran gambar area maksimal 2 MB.',
+            'image_file.mimes' => 'Gambar area harus berformat JPG, JPEG, PNG, atau WebP.',
+        ]);
 
-    $data = [
-        'title' => $request->title,
-        'description' => $request->description,
-        'sort_order' => $request->sort_order ?? $area->sort_order,
-    ];
+        $oldImage = $area->image;
+        $newImage = $oldImage;
+        $newlyUploadedPath = null;
 
-    // Ganti gambar hanya jika URL baru diisi.
-    if ($request->filled('image')) {
-        $data['image'] = trim($request->input('image'));
+        if ($request->hasFile('image_file')) {
+            $storedImagePath = $request->file('image_file')->store('reservation/areas', 'public');
+            $newlyUploadedPath = $storedImagePath;
+
+            if (! $storedImagePath) {
+                throw new \RuntimeException('Gambar area gagal disimpan. Silakan coba kembali.');
+            }
+
+            // Simpan alamat publik agar src gambar langsung dapat digunakan halaman Reservation.
+            $newImage = Storage::url($storedImagePath);
+        }
+
+        try {
+            $area->update([
+                'image' => $newImage,
+                'title' => $request->title,
+                'description' => $request->description,
+                'sort_order' => $request->sort_order ?? $area->sort_order,
+            ]);
+        } catch (\Throwable $e) {
+            if ($newlyUploadedPath) {
+                Storage::disk('public')->delete($newlyUploadedPath);
+            }
+
+            throw $e;
+        }
+
+        if ($oldImage !== $newImage) {
+            $this->deleteLocalFile($oldImage);
+        }
+
+        return back()->with('success', 'Area resto berhasil diperbarui.');
     }
-
-    $area->update($data);
-
-    return back()->with(
-        'success',
-        'Area resto berhasil diperbarui.'
-    );
-}
 
 
     /*
@@ -561,16 +570,17 @@ public function updateArea(Request $request, $id)
     |--------------------------------------------------------------------------
     */
 
-    public function destroyArea($id)
+    public function destroyArea(int $id)
     {
         $area = ReservationArea::findOrFail($id);
+        $oldImage = $area->image;
+        $deleted = $area->delete();
 
-        $area->delete();
+        if ($deleted) {
+            $this->deleteLocalFile($oldImage);
+        }
 
-        return back()->with(
-            'success',
-            'Area resto berhasil dihapus.'
-        );
+        return back()->with('success', 'Area resto berhasil dihapus.');
     }
 
     /*
@@ -586,23 +596,45 @@ public function updateArea(Request $request, $id)
     public function storeArea(Request $request)
     {
         $request->validate([
-            'image' => 'nullable|string|max:500',
+            'image_file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'sort_order' => 'nullable|integer',
+        ], [
+            'image_file.max' => 'Ukuran gambar area maksimal 2 MB.',
+            'image_file.mimes' => 'Gambar area harus berformat JPG, JPEG, PNG, atau WebP.',
         ]);
 
-        ReservationArea::create([
-            'image' => $request->image,
-            'title' => $request->title,
-            'description' => $request->description,
-            'sort_order' => $request->sort_order ?? 0,
-        ]);
+        $image = null;
+        $newlyUploadedPath = null;
 
-        return back()->with(
-            'success',
-            'Area resto berhasil ditambahkan.'
-        );
+        if ($request->hasFile('image_file')) {
+            $storedImagePath = $request->file('image_file')->store('reservation/areas', 'public');
+            $newlyUploadedPath = $storedImagePath;
+
+            if (! $storedImagePath) {
+                throw new \RuntimeException('Gambar area gagal disimpan. Silakan coba kembali.');
+            }
+
+            $image = Storage::url($storedImagePath);
+        }
+
+        try {
+            ReservationArea::create([
+                'image' => $image,
+                'title' => $request->title,
+                'description' => $request->description,
+                'sort_order' => $request->sort_order ?? 0,
+            ]);
+        } catch (\Throwable $e) {
+            if ($newlyUploadedPath) {
+                Storage::disk('public')->delete($newlyUploadedPath);
+            }
+
+            throw $e;
+        }
+
+        return back()->with('success', 'Area resto berhasil ditambahkan.');
     }
 
     /*
@@ -612,74 +644,99 @@ public function updateArea(Request $request, $id)
     */
 
     
-private function normalizeLocalPath(?string $path): ?string
-{
-    $path = trim((string) $path);
+    private function normalizeLocalPath(?string $path): ?string
+    {
+        $path = trim((string) $path);
 
-    // URL eksternal tidak perlu dihapus.
-    if ($path === '' || preg_match('#^https?://#i', $path)) {
+        if ($path === '') {
+            return null;
+        }
+
+        // Jika Storage::url() menghasilkan URL absolut, izinkan normalisasi
+        // hanya bila host cocok dengan APP_URL atau URL disk public.
+        if (preg_match('#^https?://#i', $path)) {
+            $urlHost = parse_url($path, PHP_URL_HOST);
+            $appHost = parse_url((string) config('app.url'), PHP_URL_HOST);
+            $publicDiskHost = parse_url((string) config('filesystems.disks.public.url'), PHP_URL_HOST);
+            $knownHosts = array_filter([$appHost, $publicDiskHost]);
+
+            if (! $urlHost || ! in_array(strtolower($urlHost), array_map('strtolower', $knownHosts), true)) {
+                return null;
+            }
+
+            $path = (string) parse_url($path, PHP_URL_PATH);
+        }
+
+        // Ubah URL/path storage menjadi path relatif.
+        $path = preg_replace('#^/?storage/#i', '', $path);
+        $path = ltrim($path, '/');
+
+        // Cegah path yang tidak aman.
+        if (str_contains($path, '..')) {
+            return null;
+        }
+
+        // Batasi penghapusan hanya pada folder Reservation milik fitur upload.
+        $allowedFolders = [
+            'reservation/icons/',
+            'reservation/cta/',
+            'reservation/hero/',
+            'reservation/location/',
+            'reservation/areas/',
+        ];
+
+        foreach ($allowedFolders as $folder) {
+            if (str_starts_with($path, $folder)) {
+                return $path;
+            }
+        }
+
         return null;
     }
 
-    // Ubah URL storage menjadi path relatif.
-    $path = preg_replace('#^/?storage/#i', '', $path);
-    $path = ltrim($path, '/');
+    private function deleteLocalFile(?string $path): void
+    {
+        $localPath = $this->normalizeLocalPath($path);
 
-    // Cegah path yang tidak aman.
-    if (str_contains($path, '..')) {
-        return null;
+        if (! $localPath || ! Storage::disk('public')->exists($localPath)) {
+            return;
+        }
+
+        // Cek apakah file masih digunakan oleh Cara Reservasi.
+        $usedBySteps = ReservationStep::query()
+            ->get(['icon'])
+            ->contains(function ($item) use ($localPath) {
+                return $this->normalizeLocalPath($item->icon) === $localPath;
+            });
+
+        // Cek apakah file masih digunakan oleh Ketentuan Reservasi.
+        $usedByTerms = ReservationTerm::query()
+            ->get(['icon'])
+            ->contains(function ($item) use ($localPath) {
+                return $this->normalizeLocalPath($item->icon) === $localPath;
+            });
+
+        // Cek seluruh gambar milik pengaturan Reservation.
+        $usedBySettings = ReservationSetting::query()
+            ->get(['hero_image', 'location_image', 'cta_background_image'])
+            ->contains(function ($item) use ($localPath) {
+                return $this->normalizeLocalPath($item->hero_image) === $localPath
+                    || $this->normalizeLocalPath($item->location_image) === $localPath
+                    || $this->normalizeLocalPath($item->cta_background_image) === $localPath;
+            });
+
+        // Cek apakah gambar masih digunakan oleh area resto lainnya.
+        $usedByAreas = ReservationArea::query()
+            ->get(['image'])
+            ->contains(function ($item) use ($localPath) {
+                return $this->normalizeLocalPath($item->image) === $localPath;
+            });
+
+        // Hapus hanya bila tidak ada data lain yang menggunakan file tersebut.
+        if (! $usedBySteps && ! $usedByTerms && ! $usedBySettings && ! $usedByAreas) {
+            Storage::disk('public')->delete($localPath);
+        }
     }
-
-    // Hanya izinkan folder file Reservation.
-    if (
-        !str_starts_with($path, 'reservation/icons/') &&
-        !str_starts_with($path, 'reservation/cta/')
-    ) {
-        return null;
-    }
-
-    return $path;
-}
-
-private function deleteLocalFile(?string $path): void
-{
-    $localPath = $this->normalizeLocalPath($path);
-
-    if (
-        ! $localPath ||
-        ! Storage::disk('public')->exists($localPath)
-    ) {
-        return;
-    }
-
-    // Periksa apakah ikon masih digunakan oleh Cara Reservasi.
-    $usedBySteps = ReservationStep::query()
-        ->get(['icon'])
-        ->contains(function ($item) use ($localPath) {
-            return $this->normalizeLocalPath($item->icon) === $localPath;
-        });
-
-    // Periksa apakah ikon masih digunakan oleh Ketentuan Reservasi.
-    $usedByTerms = ReservationTerm::query()
-        ->get(['icon'])
-        ->contains(function ($item) use ($localPath) {
-            return $this->normalizeLocalPath($item->icon) === $localPath;
-        });
-
-    // Periksa apakah gambar masih digunakan sebagai background CTA.
-    $usedBySettings = ReservationSetting::query()
-        ->get(['cta_background_image'])
-        ->contains(function ($item) use ($localPath) {
-            return $this->normalizeLocalPath(
-                $item->cta_background_image
-            ) === $localPath;
-        });
-
-    // Hapus hanya jika tidak digunakan oleh data mana pun.
-    if (! $usedBySteps && ! $usedByTerms && ! $usedBySettings) {
-        Storage::disk('public')->delete($localPath);
-    }
-}
 
 
     

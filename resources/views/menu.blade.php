@@ -1,4 +1,39 @@
 <x-layout>
+    @php
+        // Semua gambar konten harus berasal dari aset lokal/storage.
+        // URL eksternal, data URI, dan blob URI tidak diteruskan sebagai sumber gambar.
+        $resolveLocalImage = function ($value) {
+            if (!is_string($value) || trim($value) === '') {
+                return null;
+            }
+
+            $path = trim($value);
+
+            if (preg_match('/^(?:https?:)?\/\//i', $path) || preg_match('/^(?:data|blob):/i', $path)) {
+                return null;
+            }
+
+            $path = ltrim($path, '/');
+
+            if (str_starts_with($path, 'public/storage/')) {
+                $path = substr($path, 7);
+            }
+
+            if (str_starts_with($path, 'storage/')) {
+                return asset($path);
+            }
+
+            if (str_starts_with($path, 'public/')) {
+                return asset(substr($path, 7));
+            }
+
+            if (str_starts_with($path, 'img/')) {
+                return asset($path);
+            }
+
+            return asset('storage/' . $path);
+        };
+    @endphp
 
     <style>
         @media (max-width: 639px) {
@@ -46,14 +81,15 @@
             <div
                 class="relative min-h-[420px] sm:min-h-[480px] lg:min-h-[520px] overflow-hidden rounded-[1.5rem] sm:rounded-[2rem] shadow-[0_12px_30px_rgba(0,0,0,0.16)]">
                 {{-- BACKGROUND IMAGE --}}
-                @if (!empty($menuSetting?->hero_image))
-                    <img src="{{ $menuSetting->hero_image }}"
-                        alt="{{ $menuSetting->hero_title ?? 'Menu Resto Joss Gandos' }}"
+                @php
+                    $heroImageUrl = $resolveLocalImage($menuSetting?->hero_image);
+                @endphp
+                @if ($heroImageUrl)
+                    <img src="{{ $heroImageUrl }}" alt="{{ $menuSetting->hero_title ?? 'Menu Resto Joss Gandos' }}"
                         class="absolute inset-0 w-full h-full object-cover" />
                 @else
-                    {{-- GAMBAR DEFAULT --}}
-                    <img src="https://cdn.phototourl.com/free/2026-08-19-f1a7f2ac-2b3f-4113-a54f-ae0499763596.png"
-                        alt="Menu Resto Joss Gandos" class="absolute inset-0 w-full h-full object-cover" />
+                    {{-- BACKGROUND DEFAULT TANPA URL GAMBAR EKSTERNAL --}}
+                    <div class="absolute inset-0 bg-gradient-to-br from-red-950 via-neutral-800 to-amber-900"></div>
                 @endif
 
                 {{-- OVERLAY --}}
@@ -110,8 +146,20 @@
         </div>
     </section>
 
+    @php
+        $localPromotions = collect($promotions)
+            ->map(function ($promotion) use ($resolveLocalImage) {
+                return [
+                    'promotion' => $promotion,
+                    'image' => $resolveLocalImage($promotion->image_path ?? ''),
+                ];
+            })
+            ->filter(fn($item) => !empty($item['image']))
+            ->values();
+    @endphp
+
     {{-- ================= PROMO BULAN INI ================= --}}
-    @if ($promotions->count())
+    @if ($localPromotions->count())
         <section
             class="relative z-10 pb-12 fade-section opacity-0 translate-y-10 transition-all duration-1000 delay-100">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -180,16 +228,10 @@
                     {{-- AREA YANG BENAR-BENAR MENAMPUNG POSTER --}}
                     <div id="promotionCarousel"
                         class="promotion-carousel flex gap-3 sm:gap-4 overflow-x-auto overflow-y-hidden scroll-smooth snap-x snap-mandatory touch-pan-x select-none">
-                        @foreach ($promotions as $promotion)
+                        @foreach ($localPromotions as $promotionItem)
                             @php
-
-                                $promotionImage = \Illuminate\Support\Str::startsWith($promotion->image_path, [
-                                    'http://',
-                                    'https://',
-                                ])
-                                    ? $promotion->image_path
-                                    : asset('storage/' . ltrim($promotion->image_path, '/'));
-
+                                $promotion = $promotionItem['promotion'];
+                                $promotionImage = $promotionItem['image'];
                             @endphp
 
                             <button type="button"
@@ -225,7 +267,7 @@
 
                 {{-- DOT --}}
                 <div id="promotionDots" class="flex justify-center gap-1.5 mt-4">
-                    @foreach ($promotions as $promotion)
+                    @foreach ($localPromotions as $promotionItem)
                         <button type="button"
                             class="promotion-dot w-2 h-2 rounded-full bg-gray-300 transition-all duration-300"></button>
                     @endforeach
@@ -280,25 +322,22 @@
                     <div id="carousel" class="flex transition-transform duration-700 ease-in-out">
                         @forelse ($carouselMenus as $menu)
                             @php
-                                $imagePath = $menu->image_path ?? '';
-
-                                if (\Illuminate\Support\Str::startsWith($imagePath, ['http://', 'https://'])) {
-                                    $menuImage = $imagePath;
-                                } elseif (\Illuminate\Support\Str::startsWith($imagePath, 'storage/')) {
-                                    $menuImage = asset($imagePath);
-                                } else {
-                                    $menuImage = asset('storage/' . ltrim($imagePath, '/'));
-                                }
+                                $menuImage = $resolveLocalImage($menu->image_path ?? '');
                             @endphp
 
                             <div class="relative min-w-full flex flex-col md:flex-row h-auto md:h-[500px]">
                                 {{-- ================= GAMBAR KIRI ================= --}}
                                 <div
                                     class="w-full md:w-1/2 h-[300px] md:h-full relative overflow-hidden group z-10 shadow-2xl">
+                                    @if ($menuImage)
+                                        <img src="{{ $menuImage }}" alt="{{ $menu->title }}"
+                                            class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                                    @else
+                                        <div
+                                            class="absolute inset-0 bg-gradient-to-br from-neutral-800 via-neutral-700 to-red-950">
+                                        </div>
+                                    @endif
                                     <div class="absolute inset-0 bg-black/10 z-10"></div>
-
-                                    <img src="{{ $menuImage }}" alt="{{ $menu->title }}"
-                                        class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
 
                                     {{-- FAVORIT KHUSUS MOBILE --}}
                                     @if ($menu->is_recommended)
@@ -486,15 +525,7 @@
             <div id="menuGrid" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
                 @foreach ($allMenus as $menu)
                     @php
-                        $imagePath = $menu->image_path ?? '';
-
-                        if (\Illuminate\Support\Str::startsWith($imagePath, ['http://', 'https://'])) {
-                            $menuImage = $imagePath;
-                        } elseif (\Illuminate\Support\Str::startsWith($imagePath, 'storage/')) {
-                            $menuImage = asset($imagePath);
-                        } else {
-                            $menuImage = asset('storage/' . ltrim($imagePath, '/'));
-                        }
+                        $menuImage = $resolveLocalImage($menu->image_path ?? '');
                     @endphp
 
                     <div data-category="{{ $menu->category }}" data-price="{{ $menu->price ?? 0 }}"
@@ -509,9 +540,12 @@
     duration-300
     {{ $loop->index >= 8 ? 'extra-menu hidden' : '' }}">
                         {{-- GAMBAR --}}
-                        <div class="relative h-32 sm:h-40 overflow-hidden">
-                            <img src="{{ $menuImage }}" alt="{{ $menu->title }}"
-                                class="w-full h-full object-cover transition-transform duration-500 hover:scale-105" />
+                        <div
+                            class="relative h-32 sm:h-40 overflow-hidden bg-gradient-to-br from-neutral-800 via-neutral-700 to-red-950">
+                            @if ($menuImage)
+                                <img src="{{ $menuImage }}" alt="{{ $menu->title }}"
+                                    class="w-full h-full object-cover transition-transform duration-500 hover:scale-105" />
+                            @endif
 
                             {{-- FAVORIT --}}
                             @if ($menu->is_recommended)
@@ -594,9 +628,11 @@
                         shadow-[0_12px_35px_rgba(0,0,0,0.18)]">
 
                     {{-- ================= BACKGROUND IMAGE ================= --}}
-                    @if (!empty($menuSetting?->cta_image))
-                        <img src="{{ $menuSetting->cta_image }}"
-                            alt="{{ $menuSetting->cta_title ?? 'Menu Lengkap' }}"
+                    @php
+                        $ctaImageUrl = $resolveLocalImage($menuSetting?->cta_image);
+                    @endphp
+                    @if ($ctaImageUrl)
+                        <img src="{{ $ctaImageUrl }}" alt="{{ $menuSetting->cta_title ?? 'Menu Lengkap' }}"
                             class="absolute inset-0 w-full h-full object-cover object-left md:object-center" />
                     @else
                         <div class="absolute inset-0 bg-gray-800"></div>
@@ -726,46 +762,8 @@
     @endif
 
     @php
-        $resolveMenuIconUrl = function ($value) {
-            if (empty($value)) {
-                return null;
-            }
-
-            $value = trim($value);
-
-            // URL gambar eksternal atau URL localhost lama
-            if (preg_match('/^https?:\/\//i', $value)) {
-                $host = strtolower(parse_url($value, PHP_URL_HOST) ?? '');
-                $path = parse_url($value, PHP_URL_PATH) ?? '';
-
-                // Ubah URL localhost lama menjadi URL sesuai proyek aktif
-                if (in_array($host, ['localhost', '127.0.0.1'], true)) {
-                    if (preg_match('~/storage/(.+)$~', $path, $matches)) {
-                        return asset('storage/' . $matches[1]);
-                    }
-
-                    return $value;
-                }
-
-                // Pertahankan URL CDN atau gambar eksternal
-                return $value;
-            }
-
-            $path = ltrim($value, '/');
-
-            // Mendukung path public/storage/... yang lama
-            if (str_starts_with($path, 'public/storage/')) {
-                $path = substr($path, 7);
-            }
-
-            // Path yang sudah diawali storage/
-            if (str_starts_with($path, 'storage/')) {
-                return asset($path);
-            }
-
-            // Path relatif dari disk public Laravel
-            return asset('storage/' . $path);
-        };
+        // Gunakan resolver aset lokal yang sama untuk ikon paket.
+        $resolveMenuIconUrl = $resolveLocalImage;
     @endphp
 
 
@@ -830,7 +828,7 @@
                     <div class="relative z-10">
                         {{-- ICON --}}
                         <div class="w-20 h-20 mx-auto rounded-full bg-red-50 flex items-center justify-center mb-5">
-                            @if (!empty($menuSetting?->package_menu_icon))
+                            @if ($resolveMenuIconUrl($menuSetting?->package_menu_icon))
                                 <img src="{{ $resolveMenuIconUrl($menuSetting->package_menu_icon) }}"
                                     alt="{{ $menuSetting->package_menu_title ?? 'Package Menu' }}"
                                     class="w-10 h-10 object-contain" />
@@ -892,7 +890,7 @@
                     <div class="relative z-10">
                         {{-- ICON --}}
                         <div class="w-20 h-20 mx-auto rounded-full bg-red-50 flex items-center justify-center mb-5">
-                            @if (!empty($menuSetting?->box_package_icon))
+                            @if ($resolveMenuIconUrl($menuSetting?->box_package_icon))
                                 <img src="{{ $resolveMenuIconUrl($menuSetting->box_package_icon) }}"
                                     alt="{{ $menuSetting->box_package_title ?? 'Box Package' }}"
                                     class="w-10 h-10 object-contain" />
@@ -956,7 +954,7 @@
                     <div class="relative z-10">
                         {{-- ICON --}}
                         <div class="w-20 h-20 mx-auto rounded-full bg-red-50 flex items-center justify-center mb-5">
-                            @if (!empty($menuSetting?->wedding_package_icon))
+                            @if ($resolveMenuIconUrl($menuSetting?->wedding_package_icon))
                                 <img src="{{ $resolveMenuIconUrl($menuSetting->wedding_package_icon) }}"
                                     alt="{{ $menuSetting->wedding_package_title ?? 'Wedding Package' }}"
                                     class="w-10 h-10 object-contain" />
@@ -1615,11 +1613,10 @@
     {{-- ================= DATA PREVIEW MENU ================= --}}
     @php
         $menuPreviewImages = $menuPreviews
-            ->map(function ($preview) {
-                return \Illuminate\Support\Str::startsWith($preview->image_path, ['http://', 'https://'])
-                    ? $preview->image_path
-                    : asset('storage/' . ltrim($preview->image_path, '/'));
+            ->map(function ($preview) use ($resolveLocalImage) {
+                return $resolveLocalImage($preview->image_path ?? '');
             })
+            ->filter()
             ->values();
     @endphp
 
@@ -1652,14 +1649,12 @@
                 </div>
 
                 {{-- CLOSE --}}
-
-                <button type="button" onclick="closeMenuPreviewModal()" aria-label="Tutup preview menu"
-                    class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-red-600 text-white shadow-md flex items-center justify-center hover:bg-red-700 transition shrink-0">
+                <button type="button" onclick="closeMenuPreviewModal()"
+                    class="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-gray-500 hover:bg-red-600 hover:text-white transition shrink-0">
 
                     <i class="uil uil-times text-xl"></i>
 
                 </button>
-
 
             </div>
 
@@ -1795,12 +1790,11 @@
             <button type="button" onclick="closeMenuPosterModal()"
                 class="absolute top-3 right-3
                 w-10 h-10 rounded-full
-                bg-red-600
-                border border-red-700
-                text-white
-                shadow-lg
+                bg-white/10 backdrop-blur-sm
+                border border-white/40
+                text-red-600
                 flex items-center justify-center
-                hover:bg-red-700
+                hover:bg-white/20
                 transition">
                 <i class="uil uil-times text-xl"></i>
             </button>

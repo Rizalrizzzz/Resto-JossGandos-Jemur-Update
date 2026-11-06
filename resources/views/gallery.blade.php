@@ -925,12 +925,24 @@
                     class="relative min-h-[390px] sm:min-h-[450px] lg:min-h-[490px] overflow-hidden rounded-[1.5rem] sm:rounded-[2rem] shadow-[0_12px_30px_rgba(0,0,0,0.16)]">
                     {{-- BACKGROUND IMAGE --}}
                     @if (!empty($gallerySetting?->hero_image))
-                        <img src="{{ $gallerySetting->hero_image }}"
+                        @php
+                            $heroImagePath = ltrim($gallerySetting->hero_image, '/');
+
+                            if (str_starts_with($heroImagePath, 'storage/')) {
+                                $heroImageUrl = asset($heroImagePath);
+                            } elseif (str_starts_with($heroImagePath, 'public/storage/')) {
+                                $heroImageUrl = asset(substr($heroImagePath, 7));
+                            } elseif (str_starts_with($heroImagePath, 'public/')) {
+                                $heroImageUrl = asset('storage/' . substr($heroImagePath, 7));
+                            } else {
+                                $heroImageUrl = asset('storage/' . $heroImagePath);
+                            }
+                        @endphp
+                        <img src="{{ $heroImageUrl }}"
                             alt="{{ $gallerySetting->hero_title ?? 'Gallery Resto Joss Gandos' }}"
                             class="absolute inset-0 w-full h-full object-cover" />
                     @else
-                        <img src="https://cdn.phototourl.com/free/2026-08-13-6dcf30be-b27a-4e34-a6c2-a8ddd577bb6b.png"
-                            alt="Gallery Resto Joss Gandos" class="absolute inset-0 w-full h-full object-cover" />
+                        <div class="absolute inset-0 bg-gradient-to-br from-stone-700 via-stone-600 to-amber-800"></div>
                     @endif
 
                     {{-- OVERLAY --}}
@@ -945,23 +957,31 @@
                         // ================= BINGKAI 1 =================
                         $frame1Path = ltrim($gallerySetting->frame_1_image ?? '', '/');
 
-                        if (str_starts_with($frame1Path, 'http://') || str_starts_with($frame1Path, 'https://')) {
-                            $frame1Image = $frame1Path;
-                        } elseif ($frame1Path) {
-                            $frame1Image = asset('storage/' . $frame1Path);
-                        } else {
+                        if (!$frame1Path) {
                             $frame1Image = '';
+                        } elseif (str_starts_with($frame1Path, 'storage/')) {
+                            $frame1Image = asset($frame1Path);
+                        } elseif (str_starts_with($frame1Path, 'public/storage/')) {
+                            $frame1Image = asset(substr($frame1Path, 7));
+                        } elseif (str_starts_with($frame1Path, 'public/')) {
+                            $frame1Image = asset('storage/' . substr($frame1Path, 7));
+                        } else {
+                            $frame1Image = asset('storage/' . $frame1Path);
                         }
 
                         // ================= BINGKAI 2 =================
                         $frame2Path = ltrim($gallerySetting->frame_2_image ?? '', '/');
 
-                        if (str_starts_with($frame2Path, 'http://') || str_starts_with($frame2Path, 'https://')) {
-                            $frame2Image = $frame2Path;
-                        } elseif ($frame2Path) {
-                            $frame2Image = asset('storage/' . $frame2Path);
-                        } else {
+                        if (!$frame2Path) {
                             $frame2Image = '';
+                        } elseif (str_starts_with($frame2Path, 'storage/')) {
+                            $frame2Image = asset($frame2Path);
+                        } elseif (str_starts_with($frame2Path, 'public/storage/')) {
+                            $frame2Image = asset(substr($frame2Path, 7));
+                        } elseif (str_starts_with($frame2Path, 'public/')) {
+                            $frame2Image = asset('storage/' . substr($frame2Path, 7));
+                        } else {
+                            $frame2Image = asset('storage/' . $frame2Path);
                         }
                     @endphp
 
@@ -1327,12 +1347,7 @@
 
                                         $imagePath = ltrim($photo->image_path ?? '', '/');
 
-                                        if (
-                                            str_starts_with($imagePath, 'http://') ||
-                                            str_starts_with($imagePath, 'https://')
-                                        ) {
-                                            $imageUrl = $imagePath;
-                                        } elseif (str_starts_with($imagePath, 'storage/')) {
+                                        if (str_starts_with($imagePath, 'storage/')) {
                                             $imageUrl = asset($imagePath);
                                         } elseif (str_starts_with($imagePath, 'public/')) {
                                             $imageUrl = asset(substr($imagePath, 7));
@@ -1844,10 +1859,6 @@
                             'description' => $photo->description,
                             'image' => (function ($path) {
                                 $path = ltrim($path ?? '', '/');
-            
-                                if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-                                    return $path;
-                                }
             
                                 if (str_starts_with($path, 'storage/')) {
                                     return asset($path);
@@ -2513,8 +2524,8 @@
                             ${items
                                 .map(
                                     (item) => `
-                                                                                                                                                                                                                                                                                <li>${escapeHtml(item)}</li>
-                                                                                                                                                                                                                                                                            `,
+                                                                                                                                                                                                                                                                                    <li>${escapeHtml(item)}</li>
+                                                                                                                                                                                                                                                                                `,
                                 )
                                 .join("")}
                         </ol>

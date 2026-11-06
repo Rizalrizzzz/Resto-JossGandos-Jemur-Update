@@ -9,7 +9,7 @@
 
     <link rel="icon" type="image/png" href="{{ asset('img/logojossgandos.png') }}">
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css" />
 
@@ -26,6 +26,32 @@
     </style>
 </head>
 
+@php
+    /**
+     * Gunakan gambar dari storage lokal saja. Nilai berbentuk URL eksternal
+     * tidak diteruskan ke atribut src gambar.
+     */
+    $resolveLocalImageUrl = static function ($value): string {
+        $path = trim((string) $value);
+
+        if ($path === '' || str_contains($path, '://')) {
+            return '';
+        }
+
+        $path = ltrim($path, '/');
+
+        if (str_starts_with($path, 'public/storage/')) {
+            $path = substr($path, 7);
+        } elseif (str_starts_with($path, 'public/')) {
+            $path = 'storage/' . substr($path, 7);
+        } elseif (!str_starts_with($path, 'storage/')) {
+            $path = 'storage/' . $path;
+        }
+
+        return asset($path);
+    };
+@endphp
+
 <body class="bg-slate-50 text-slate-800 overflow-hidden">
     <div class="flex h-screen overflow-hidden">
         {{-- =========================================================
@@ -38,8 +64,8 @@
     ========================================================== --}}
         <main class="flex-1 min-w-0 min-h-0 overflow-y-auto bg-slate-50">
             {{-- HEADER ADMIN --}}
-            <header class="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm px-6 py-4">
-                <div class="flex items-center justify-between gap-4">
+            <header class="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm px-4 md:px-6 py-4">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
                     {{-- KIRI --}}
                     <div class="flex items-center gap-4 min-w-0">
                         <button type="button" onclick="toggleSidebar()"
@@ -48,7 +74,7 @@
                         </button>
 
                         <div>
-                            <h1 class="text-2xl font-bold text-slate-800">
+                            <h1 class="text-xl md:text-2xl font-bold text-slate-800">
                                 Kelola Reservation
                             </h1>
                         </div>
@@ -56,9 +82,8 @@
 
                     {{-- KANAN --}}
                     <button type="button" id="saveAllReservationChanges"
-                        class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-sm transition shrink-0">
+                        class="w-full md:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 md:py-2.5 rounded-xl font-semibold shadow-sm transition shrink-0">
                         <i class="uil uil-save"></i>
-
                         Simpan Semua Perubahan
                     </button>
                 </div>
@@ -70,8 +95,9 @@
             <div class="p-4 md:p-6 space-y-6">
                 {{-- SUCCESS --}}
                 @if (session('success'))
-                    <div
-                        class="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+                    <div id="reservationSuccessNotification" role="status"
+                        class="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700"
+                        style="transition: opacity 0.35s ease, transform 0.35s ease;">
                         {{ session('success') }}
                     </div>
                 @endif
@@ -107,7 +133,7 @@
                     </div>
 
                     <form action="{{ route('reservation.settings.update') }}" method="POST"
-                        class="reservation-bulk-update-form">
+                        enctype="multipart/form-data" class="reservation-bulk-update-form">
                         @csrf
 
                         <div class="p-6">
@@ -116,11 +142,12 @@
                                 <div class="space-y-5">
                                     {{-- BADGE --}}
                                     <div>
-                                        <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                        <label for="reservationHeroBadge"
+                                            class="block text-sm font-semibold text-slate-700 mb-2">
                                             Badge
                                         </label>
 
-                                        <input type="text" name="hero_badge"
+                                        <input id="reservationHeroBadge" type="text" name="hero_badge"
                                             value="{{ old('hero_badge', $setting->hero_badge ?? '') }}"
                                             placeholder="BOOKING & RESERVATION"
                                             class="w-full h-12 px-4 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
@@ -128,11 +155,12 @@
 
                                     {{-- JUDUL --}}
                                     <div>
-                                        <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                        <label for="reservationHeroTitle"
+                                            class="block text-sm font-semibold text-slate-700 mb-2">
                                             Judul
                                         </label>
 
-                                        <input type="text" name="hero_title"
+                                        <input id="reservationHeroTitle" type="text" name="hero_title"
                                             value="{{ old('hero_title', $setting->hero_title ?? '') }}"
                                             placeholder="Reservasi Mudah, Momen Spesial Semakin Berkesan"
                                             class="w-full h-12 px-4 rounded-xl border border-slate-200 outline-none focus:border-indigo-500" />
@@ -140,11 +168,12 @@
 
                                     {{-- DESKRIPSI --}}
                                     <div>
-                                        <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                        <label for="reservationHeroDescription"
+                                            class="block text-sm font-semibold text-slate-700 mb-2">
                                             Deskripsi
                                         </label>
 
-                                        <textarea name="hero_description" rows="5"
+                                        <textarea id="reservationHeroDescription" name="hero_description" rows="5"
                                             placeholder="Reservasi lebih cepat dan praktis langsung via WhatsApp. Tim kami siap membantu Anda."
                                             class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none resize-y focus:border-indigo-500">{{ old('hero_description', $setting->hero_description ?? '') }}</textarea
                                         >
@@ -152,13 +181,13 @@
 
                                     {{-- LINK WA --}}
                                     <div>
-                                        <label
+                                        <label for="reservationHeroWhatsappLink"
                                             class="block text-sm font-semibold text-slate-700 mb-2"
                                         >
                                             Link Tombol WhatsApp
                                         </label>
 
-                                        <input
+                                        <input id="reservationHeroWhatsappLink"
                                             type="text"
                                             name="hero_whatsapp_link"
                                             value="{{ old('hero_whatsapp_link', $setting->hero_whatsapp_link ?? '') }}"
@@ -169,13 +198,13 @@
 
                                     {{-- RESPON --}}
                                     <div>
-                                        <label
+                                        <label for="reservationResponseTime"
                                             class="block text-sm font-semibold text-slate-700 mb-2"
                                         >
                                             Respon Cepat
                                         </label>
 
-                                        <input
+                                        <input id="reservationResponseTime"
                                             type="text"
                                             name="response_time"
                                             value="{{ old('response_time', $setting->response_time ?? '') }}"
@@ -187,45 +216,38 @@
 
                                 {{-- RIGHT IMAGE --}}
                                 <div>
-                                    <label
-                                        class="block text-sm font-semibold text-slate-700 mb-2"
-                                    >
-                                        URL Gambar Header
+                                    @php
+                                        $heroImageUrl = $resolveLocalImageUrl($setting->hero_image ?? '');
+                                    @endphp
+
+                                    <label for="heroImageInput" class="block text-sm font-semibold text-slate-700 mb-2">
+                                        Gambar Header
                                     </label>
 
                                     <input
-                                        type="url"
-                                        name="hero_image"
+                                        type="file"
+                                        name="hero_image_file"
                                         id="heroImageInput"
-                                        value="{{ old('hero_image', $setting->hero_image ?? '') }}"
-                                        placeholder="https://contoh.com/reservation.jpg"
-                                        class="w-full h-12 px-4 rounded-xl border border-slate-200 outline-none focus:border-indigo-500"
+                                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                        class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium" data-image-upload="true"
                                     />
+                                    <p class="mt-2 text-xs text-slate-500">Format JPG, JPEG, PNG, atau WebP. Maksimal 2 MB.</p>
 
                                     {{-- PREVIEW --}}
-                                    <div
-                                        class="mt-4 h-72 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50"
-                                    >
+                                    <div class="mt-4 h-72 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50">
                                         <img
                                             id="heroImagePreview"
-                                            src="{{ $setting->hero_image ?? '' }}"
+                                            src="{{ $heroImageUrl }}"
                                             alt="Preview Header"
-                                            class="{{ !empty($setting?->hero_image) ? '' : 'hidden' }}
-                                               w-full h-full object-cover"
+                                            class="{{ $heroImageUrl ? '' : 'hidden' }} w-full h-full object-cover"
                                         />
 
                                         <div
                                             id="heroImagePlaceholder"
-                                            class="{{ !empty($setting?->hero_image) ? 'hidden' : 'flex' }}
-                                               w-full h-full
-                                               items-center justify-center
-                                               text-slate-400"
+                                            class="{{ $heroImageUrl ? 'hidden' : 'flex' }} w-full h-full items-center justify-center text-slate-400"
                                         >
                                             <div class="text-center">
-                                                <i
-                                                    class="uil uil-image text-4xl"
-                                                ></i>
-
+                                                <i class="uil uil-image text-4xl"></i>
                                                 <p class="mt-2 text-sm">Preview gambar akan tampil di sini</p>
                                             </div>
                                         </div>
@@ -277,11 +299,11 @@
 
                                 {{-- CARA RESERVASI --}}
                                 <div class="p-5 rounded-2xl border border-slate-200 bg-slate-50">
-                                    <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                    <label for="reservationStepsTitle" class="block text-sm font-semibold text-slate-700 mb-2">
                                         Cara Reservasi
                                     </label>
 
-                                    <input
+                                    <input id="reservationStepsTitle"
                                         type="text"
                                         name="steps_title"
                                         value="{{ old('steps_title', $setting->steps_title ?? 'Cara Reservasi') }}"
@@ -292,11 +314,11 @@
 
                                 {{-- KETENTUAN RESERVASI --}}
                                 <div class="p-5 rounded-2xl border border-slate-200 bg-slate-50">
-                                    <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                    <label for="reservationTermsTitle" class="block text-sm font-semibold text-slate-700 mb-2">
                                         Ketentuan Reservasi
                                     </label>
 
-                                    <input
+                                    <input id="reservationTermsTitle"
                                         type="text"
                                         name="terms_title"
                                         value="{{ old('terms_title', $setting->terms_title ?? 'Ketentuan Reservasi') }}"
@@ -307,11 +329,11 @@
 
                                 {{-- KENALI AREA RESTO --}}
                                 <div class="p-5 rounded-2xl border border-slate-200 bg-slate-50">
-                                    <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                    <label for="reservationAreasTitle" class="block text-sm font-semibold text-slate-700 mb-2">
                                         Kenali Area Resto
                                     </label>
 
-                                    <input
+                                    <input id="reservationAreasTitle"
                                         type="text"
                                         name="areas_title"
                                         value="{{ old('areas_title', $setting->areas_title ?? 'Kenali Area Resto') }}"
@@ -322,11 +344,11 @@
 
                                 {{-- DESKRIPSI AREA --}}
                                 <div class="p-5 rounded-2xl border border-slate-200 bg-slate-50">
-                                    <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                    <label for="reservationAreasSubtitle" class="block text-sm font-semibold text-slate-700 mb-2">
                                         Deskripsi Area
                                     </label>
 
-                                    <input
+                                    <input id="reservationAreasSubtitle"
                                         type="text"
                                         name="areas_subtitle"
                                         value="{{ old('areas_subtitle', $setting->areas_subtitle ?? 'Pilih suasana yang sesuai untuk momen Anda.') }}"
@@ -337,11 +359,11 @@
 
                                 {{-- LOKASI & INFORMASI --}}
                                 <div class="md:col-span-2 p-5 rounded-2xl border border-slate-200 bg-slate-50">
-                                    <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                    <label for="reservationLocationTitle" class="block text-sm font-semibold text-slate-700 mb-2">
                                         Lokasi & Informasi
                                     </label>
 
-                                    <input
+                                    <input id="reservationLocationTitle"
                                         type="text"
                                         name="location_title"
                                         value="{{ old('location_title', $setting->location_title ?? 'Lokasi & Informasi') }}"
@@ -412,7 +434,7 @@
                             >
                                 {{-- ICON --}}
                                 <div>
-                                    <label
+                                    <label for="addStepFile"
                                         class="block text-sm font-semibold text-slate-700 mb-2"
                                     >
                                         Ikon
@@ -431,31 +453,22 @@
                                         type="file"
                                         name="icon_file"
                                         id="addStepFile"
-                                        accept="image/*"
-                                        class="mt-3 block w-full text-sm"
+                                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                       class="mt-3 block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium" data-image-upload="true"
                                     />
-
-                                    <input
-                                        type="text"
-                                        name="icon_url"
-                                        id="addStepUrl"
-                                        placeholder="Atau URL ikon"
-                                        class="mt-3 w-full h-11 px-4 rounded-xl border border-slate-200 bg-white outline-none"
-                                    />
-
-                                    <p class="text-xs text-slate-400 mt-2">Upload file akan diprioritaskan daripada URL.</p>
+                                    <p class="mt-2 text-xs text-slate-500">Format JPG, JPEG, PNG, atau WebP. Maksimal 2 MB.</p>
                                 </div>
 
                                 {{-- DATA --}}
                                 <div class="space-y-5">
                                     <div>
-                                        <label
+                                        <label for="addStepTitle"
                                             class="block text-sm font-semibold mb-2"
                                         >
                                             Judul
                                         </label>
 
-                                        <input
+                                        <input id="addStepTitle"
                                             type="text"
                                             name="title"
                                             required
@@ -465,13 +478,13 @@
                                     </div>
 
                                     <div>
-                                        <label
+                                        <label for="addStepDescription"
                                             class="block text-sm font-semibold mb-2"
                                         >
                                             Deskripsi
                                         </label>
 
-                                        <textarea
+                                        <textarea id="addStepDescription"
                                             name="description"
                                             rows="4"
                                             placeholder="Klik tombol WhatsApp di bawah untuk memulai percakapan."
@@ -480,11 +493,11 @@
                                     </div>
 
                                     <div>
-                                        <label class="block text-sm font-semibold mb-2">
+                                        <label for="addStepSortOrder" class="block text-sm font-semibold mb-2">
                                             Urutan
                                         </label>
 
-                                        <input type="number" name="sort_order"
+                                        <input id="addStepSortOrder" type="number" name="sort_order"
                                             value="{{ ($steps->max('sort_order') ?? 0) + 1 }}"
                                             class="w-full h-12 px-4 rounded-xl border border-slate-200 bg-white outline-none" />
                                     </div>
@@ -510,13 +523,7 @@
             <div class="px-6 pb-6 space-y-4">
                 @forelse ($steps as $step)
                     @php
-                        $stepIcon = null;
-
-                        if ($step->icon) {
-                            $stepIcon = filter_var($step->icon, FILTER_VALIDATE_URL)
-                                ? $step->icon
-                                : asset('storage/' . ltrim($step->icon, '/'));
-                        }
+                        $stepIcon = $resolveLocalImageUrl($step->icon ?? '');
                     @endphp
 
                     <div class="rounded-2xl border border-slate-200 overflow-hidden">
@@ -558,7 +565,8 @@
                                 <div class="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
                                     {{-- ICON --}}
                                     <div>
-                                        <label class="block text-sm font-semibold mb-2">
+                                        <label for="stepFile{{ $step->id }}"
+                                            class="block text-sm font-semibold mb-2">
                                             Ikon
                                         </label>
 
@@ -575,44 +583,45 @@
                                         </div>
 
                                         <input type="file" name="icon_file" id="stepFile{{ $step->id }}"
-                                            accept="image/*" class="mt-3 block w-full text-sm" />
-
-                                        <input type="text" name="icon_url" id="stepUrl{{ $step->id }}"
-                                            value="{{ filter_var($step->icon, FILTER_VALIDATE_URL) ? $step->icon : '' }}"
-                                            placeholder="Atau URL ikon"
-                                            class="mt-3 w-full h-11 px-4 rounded-xl border border-slate-200 outline-none" />
+                                            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                            class="mt-3 block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium"
+                                            data-image-upload="true" />
+                                        <p class="mt-2 text-xs text-slate-500">Format JPG, JPEG, PNG, atau WebP.
+                                            Maksimal 2 MB.</p>
                                     </div>
 
                                     {{-- DATA --}}
                                     <div class="space-y-5">
                                         <div>
-                                            <label class="block text-sm font-semibold mb-2">
+                                            <label for="stepTitle{{ $step->id }}"
+                                                class="block text-sm font-semibold mb-2">
                                                 Judul
                                             </label>
 
-                                            <input type="text" name="title" value="{{ $step->title }}"
-                                                required
+                                            <input id="stepTitle{{ $step->id }}" type="text" name="title"
+                                                value="{{ $step->title }}" required
                                                 class="w-full h-12 px-4 rounded-xl border border-slate-200 outline-none" />
                                         </div>
 
                                         <div>
-                                            <label class="block text-sm font-semibold mb-2">
+                                            <label for="stepDescription{{ $step->id }}"
+                                                class="block text-sm font-semibold mb-2">
                                                 Deskripsi
                                             </label>
 
-                                            <textarea name="description" rows="5"
+                                            <textarea id="stepDescription{{ $step->id }}" name="description" rows="5"
                                                 class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none resize-y">{{ $step->description }}</textarea
                                                     >
                                                 </div>
 
                                                 <div>
-                                                    <label
+                                                    <label for="stepSortOrder{{ $step->id }}"
                                                         class="block text-sm font-semibold mb-2"
                                                     >
                                                         Urutan
                                                     </label>
 
-                                                    <input
+                                                    <input id="stepSortOrder{{ $step->id }}"
                                                         type="number"
                                                         name="sort_order"
                                                         value="{{ $step->sort_order }}"
@@ -718,7 +727,7 @@
                                 class="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6"
                             >
                                 <div>
-                                    <label
+                                    <label for="addTermFile"
                                         class="block text-sm font-semibold mb-2"
                                     >
                                         Ikon
@@ -737,28 +746,21 @@
                                         type="file"
                                         name="icon_file"
                                         id="addTermFile"
-                                        accept="image/*"
-                                        class="mt-3 block w-full text-sm"
+                                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                        class="mt-3 block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium" data-image-upload="true"
                                     />
-
-                                    <input
-                                        type="text"
-                                        name="icon_url"
-                                        id="addTermUrl"
-                                        placeholder="Atau URL ikon"
-                                        class="mt-3 w-full h-11 px-4 rounded-xl border border-slate-200 bg-white outline-none"
-                                    />
+                                    <p class="mt-2 text-xs text-slate-500">Format JPG, JPEG, PNG, atau WebP. Maksimal 2 MB.</p>
                                 </div>
 
                                 <div class="space-y-5">
                                     <div>
-                                        <label
+                                        <label for="addTermTitle"
                                             class="block text-sm font-semibold mb-2"
                                         >
                                             Judul
                                         </label>
 
-                                        <input
+                                        <input id="addTermTitle"
                                             type="text"
                                             name="title"
                                             required
@@ -768,13 +770,13 @@
                                     </div>
 
                                     <div>
-                                        <label
+                                        <label for="addTermDescription"
                                             class="block text-sm font-semibold mb-2"
                                         >
                                             Deskripsi
                                         </label>
 
-                                        <textarea
+                                        <textarea id="addTermDescription"
                                             name="description"
                                             rows="5"
                                             placeholder="Reservasi dianggap tersedia setelah mendapatkan konfirmasi dari tim kami."
@@ -783,11 +785,11 @@
                                         </div>
 
                                         <div>
-                                            <label class="block text-sm font-semibold mb-2">
+                                            <label for="addTermSortOrder" class="block text-sm font-semibold mb-2">
                                                 Urutan
                                             </label>
 
-                                            <input type="number" name="sort_order"
+                                            <input id="addTermSortOrder" type="number" name="sort_order"
                                                 value="{{ ($terms->max('sort_order') ?? 0) + 1 }}"
                                                 class="w-full h-12 px-4 rounded-xl border border-slate-200 bg-white outline-none" />
                                         </div>
@@ -813,13 +815,7 @@
                         <div class="px-6 pb-6 space-y-4">
                             @forelse ($terms as $term)
                                 @php
-                                    $termIcon = null;
-
-                                    if ($term->icon) {
-                                        $termIcon = filter_var($term->icon, FILTER_VALIDATE_URL)
-                                            ? $term->icon
-                                            : asset('storage/' . ltrim($term->icon, '/'));
-                                    }
+                                    $termIcon = $resolveLocalImageUrl($term->icon ?? '');
                                 @endphp
 
                                 <div class="rounded-2xl border border-slate-200 overflow-hidden">
@@ -860,7 +856,8 @@
 
                                             <div class="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
                                                 <div>
-                                                    <label class="block text-sm font-semibold mb-2">
+                                                    <label for="termFile{{ $term->id }}"
+                                                        class="block text-sm font-semibold mb-2">
                                                         Ikon
                                                     </label>
 
@@ -877,43 +874,44 @@
                                                     </div>
 
                                                     <input type="file" name="icon_file"
-                                                        id="termFile{{ $term->id }}" accept="image/*"
-                                                        class="mt-3 block w-full text-sm" />
-
-                                                    <input type="text" name="icon_url"
-                                                        id="termUrl{{ $term->id }}"
-                                                        value="{{ filter_var($term->icon, FILTER_VALIDATE_URL) ? $term->icon : '' }}"
-                                                        placeholder="Atau URL ikon"
-                                                        class="mt-3 w-full h-11 px-4 rounded-xl border border-slate-200 outline-none" />
+                                                        id="termFile{{ $term->id }}"
+                                                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                                        class="mt-3 block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium"
+                                                        data-image-upload="true" />
+                                                    <p class="mt-2 text-xs text-slate-500">Format JPG, JPEG, PNG, atau
+                                                        WebP. Maksimal 2 MB.</p>
                                                 </div>
 
                                                 <div class="space-y-5">
                                                     <div>
-                                                        <label class="block text-sm font-semibold mb-2">
+                                                        <label for="termTitle{{ $term->id }}"
+                                                            class="block text-sm font-semibold mb-2">
                                                             Judul
                                                         </label>
 
-                                                        <input type="text" name="title"
-                                                            value="{{ $term->title }}" required
+                                                        <input id="termTitle{{ $term->id }}" type="text"
+                                                            name="title" value="{{ $term->title }}" required
                                                             class="w-full h-12 px-4 rounded-xl border border-slate-200 outline-none" />
                                                     </div>
 
                                                     <div>
-                                                        <label class="block text-sm font-semibold mb-2">
+                                                        <label for="termDescription{{ $term->id }}"
+                                                            class="block text-sm font-semibold mb-2">
                                                             Deskripsi
                                                         </label>
 
-                                                        <textarea name="description" rows="5"
+                                                        <textarea id="termDescription{{ $term->id }}" name="description" rows="5"
                                                             class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none resize-y">{{ $term->description }}</textarea>
                                                     </div>
 
                                                     <div>
-                                                        <label class="block text-sm font-semibold mb-2">
+                                                        <label for="termSortOrder{{ $term->id }}"
+                                                            class="block text-sm font-semibold mb-2">
                                                             Urutan
                                                         </label>
 
-                                                        <input type="number" name="sort_order"
-                                                            value="{{ $term->sort_order }}"
+                                                        <input id="termSortOrder{{ $term->id }}" type="number"
+                                                            name="sort_order" value="{{ $term->sort_order }}"
                                                             class="w-full h-12 px-4 rounded-xl border border-slate-200 outline-none" />
                                                     </div>
 
@@ -975,13 +973,7 @@
                             <div class="px-6 pb-6 space-y-4">
                                 @foreach ($areas->take(3) as $area)
                                     @php
-                                        $areaImage = null;
-
-                                        if ($area->image) {
-                                            $areaImage = filter_var($area->image, FILTER_VALIDATE_URL)
-                                                ? $area->image
-                                                : asset('storage/' . ltrim($area->image, '/'));
-                                        }
+                                        $areaImage = $resolveLocalImageUrl($area->image ?? '');
                                     @endphp
 
                                     {{-- CARD AREA --}}
@@ -1024,15 +1016,17 @@
                                         <div id="area{{ $area->id }}"
                                             class="hidden border-t border-slate-200 bg-white">
                                             <form action="{{ route('reservation.areas.update', $area->id) }}"
-                                                method="POST" class="p-6 reservation-bulk-update-form">
+                                                method="POST" enctype="multipart/form-data"
+                                                class="p-6 reservation-bulk-update-form">
                                                 @csrf
                                                 @method ('PUT')
 
                                                 <div class="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
                                                     {{-- IMAGE --}}
                                                     <div>
-                                                        <label class="block text-sm font-semibold text-slate-700 mb-2">
-                                                            URL Gambar
+                                                        <label for="areaInput{{ $area->id }}"
+                                                            class="block text-sm font-semibold text-slate-700 mb-2">
+                                                            Gambar Area
                                                         </label>
 
                                                         <div
@@ -1056,35 +1050,37 @@
                                                             </div>
                                                         </div>
 
-                                                        <input type="url" name="image"
+                                                        <input type="file" name="image_file"
                                                             id="areaInput{{ $area->id }}"
-                                                            value="{{ filter_var($area->image, FILTER_VALIDATE_URL) ? $area->image : '' }}"
-                                                            placeholder="https://contoh.com/area.jpg"
-                                                            class="mt-3 w-full h-11 px-4 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+                                                            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                                            class="mt-3 block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium"
+                                                            data-image-upload="true" />
+                                                        <p class="mt-2 text-xs text-slate-500">Format JPG, JPEG, PNG,
+                                                            atau WebP. Maksimal 2 MB.</p>
                                                     </div>
 
                                                     {{-- DATA --}}
                                                     <div class="space-y-5">
                                                         {{-- JUDUL --}}
                                                         <div>
-                                                            <label
+                                                            <label for="areaTitle{{ $area->id }}"
                                                                 class="block text-sm font-semibold text-slate-700 mb-2">
                                                                 Judul
                                                             </label>
 
-                                                            <input type="text" name="title"
-                                                                value="{{ $area->title }}" required
+                                                            <input id="areaTitle{{ $area->id }}" type="text"
+                                                                name="title" value="{{ $area->title }}" required
                                                                 class="w-full h-12 px-4 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
                                                         </div>
 
                                                         {{-- DESKRIPSI --}}
                                                         <div>
-                                                            <label
+                                                            <label for="areaDescription{{ $area->id }}"
                                                                 class="block text-sm font-semibold text-slate-700 mb-2">
                                                                 Deskripsi
                                                             </label>
 
-                                                            <textarea name="description" rows="5"
+                                                            <textarea id="areaDescription{{ $area->id }}" name="description" rows="5"
                                                                 class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none resize-y focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">{{ $area->description }}</textarea>
                                                         </div>
 
@@ -1119,7 +1115,7 @@
                             </div>
 
                             <form action="{{ route('reservation.settings.update') }}" method="POST"
-                                class="reservation-bulk-update-form">
+                                enctype="multipart/form-data" class="reservation-bulk-update-form">
                                 @csrf
 
                                 <div class="p-6">
@@ -1127,53 +1123,63 @@
                                         {{-- LEFT --}}
                                         <div class="space-y-5">
                                             <div>
-                                                <label class="block text-sm font-semibold mb-2">
+                                                <label for="reservationLocationName"
+                                                    class="block text-sm font-semibold mb-2">
                                                     Nama Resto
                                                 </label>
 
-                                                <input type="text" name="location_name"
+                                                <input id="reservationLocationName" type="text"
+                                                    name="location_name"
                                                     value="{{ old('location_name', $setting->location_name ?? '') }}"
                                                     placeholder="Resto Joss Gandos - Jemursari"
                                                     class="w-full h-12 px-4 rounded-xl border border-slate-200 outline-none" />
                                             </div>
 
                                             <div>
-                                                <label class="block text-sm font-semibold mb-2">
+                                                <label for="reservationLocationSubtitle"
+                                                    class="block text-sm font-semibold mb-2">
                                                     Subtitle
                                                 </label>
 
-                                                <input type="text" name="location_subtitle"
+                                                <input id="reservationLocationSubtitle" type="text"
+                                                    name="location_subtitle"
                                                     value="{{ old('location_subtitle', $setting->location_subtitle ?? '') }}"
                                                     placeholder="Pusat Kuliner & Event Surabaya"
                                                     class="w-full h-12 px-4 rounded-xl border border-slate-200 outline-none" />
                                             </div>
 
                                             <div>
-                                                <label class="block text-sm font-semibold mb-2">
+                                                <label for="reservationAddress"
+                                                    class="block text-sm font-semibold mb-2">
                                                     Alamat
                                                 </label>
 
-                                                <textarea name="address" rows="5" placeholder="Jl. Raya Jemursari No.15, Jemur Wonosari..."
+                                                <textarea id="reservationAddress" name="address" rows="5" autocomplete="off"
+                                                    placeholder="Jl. Raya Jemursari No.15, Jemur Wonosari..."
                                                     class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none resize-y">{{ old('address', $setting->address ?? '') }}</textarea>
                                             </div>
 
                                             <div>
-                                                <label class="block text-sm font-semibold mb-2">
+                                                <label for="reservationOperatingHours"
+                                                    class="block text-sm font-semibold mb-2">
                                                     Jam Operasional
                                                 </label>
 
-                                                <input type="text" name="operating_hours"
+                                                <input id="reservationOperatingHours" type="text"
+                                                    name="operating_hours"
                                                     value="{{ old('operating_hours', $setting->operating_hours ?? '') }}"
                                                     placeholder="Senin - Minggu | 10.00 WIB – 22.00 WIB"
                                                     class="w-full h-12 px-4 rounded-xl border border-slate-200 outline-none" />
                                             </div>
 
                                             <div>
-                                                <label class="block text-sm font-semibold mb-2">
+                                                <label for="reservationWhatsappNumber"
+                                                    class="block text-sm font-semibold mb-2">
                                                     WhatsApp
                                                 </label>
 
-                                                <input type="text" name="whatsapp_number"
+                                                <input id="reservationWhatsappNumber" type="text"
+                                                    name="whatsapp_number"
                                                     value="{{ old('whatsapp_number', $setting->whatsapp_number ?? '') }}"
                                                     placeholder="+62 896-9907-1599"
                                                     class="w-full h-12 px-4 rounded-xl border border-slate-200 outline-none" />
@@ -1182,31 +1188,34 @@
 
                                         {{-- RIGHT --}}
                                         <div>
-                                            <label class="block text-sm font-semibold mb-2">
-                                                URL Gambar Resto
+                                            @php
+                                                $locationImageUrl = $resolveLocalImageUrl(
+                                                    $setting->location_image ?? '',
+                                                );
+                                            @endphp
+
+                                            <label for="locationImageInput" class="block text-sm font-semibold mb-2">
+                                                Gambar Resto
                                             </label>
 
-                                            <input type="url" name="location_image" id="locationImageInput"
-                                                value="{{ old('location_image', $setting->location_image ?? '') }}"
-                                                placeholder="https://contoh.com/resto.jpg"
-                                                class="w-full h-12 px-4 rounded-xl border border-slate-200 outline-none" />
+                                            <input type="file" name="location_image_file" id="locationImageInput"
+                                                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                                class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium"
+                                                data-image-upload="true" />
+                                            <p class="mt-2 text-xs text-slate-500">Format JPG, JPEG, PNG, atau WebP.
+                                                Maksimal 2 MB.</p>
 
                                             {{-- PREVIEW --}}
                                             <div
                                                 class="mt-4 h-80 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50">
-                                                <img id="locationImagePreview"
-                                                    src="{{ $setting->location_image ?? '' }}" alt="Preview Resto"
-                                                    class="{{ !empty($setting?->location_image) ? '' : 'hidden' }}
-                                               w-full h-full object-cover" />
+                                                <img id="locationImagePreview" src="{{ $locationImageUrl }}"
+                                                    alt="Preview Resto"
+                                                    class="{{ $locationImageUrl ? '' : 'hidden' }} w-full h-full object-cover" />
 
                                                 <div id="locationImagePlaceholder"
-                                                    class="{{ !empty($setting?->location_image) ? 'hidden' : 'flex' }}
-                                               w-full h-full
-                                               items-center justify-center
-                                               text-slate-400">
+                                                    class="{{ $locationImageUrl ? 'hidden' : 'flex' }} w-full h-full items-center justify-center text-slate-400">
                                                     <div class="text-center">
                                                         <i class="uil uil-image text-4xl"></i>
-
                                                         <p class="mt-2 text-sm">Preview gambar resto</p>
                                                     </div>
                                                 </div>
@@ -1228,11 +1237,13 @@
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                                             {{-- INSTAGRAM --}}
                                             <div>
-                                                <label class="block text-sm font-semibold mb-2">
+                                                <label for="reservationInstagramLink"
+                                                    class="block text-sm font-semibold mb-2">
                                                     Instagram
                                                 </label>
 
-                                                <input type="text" name="instagram_link"
+                                                <input id="reservationInstagramLink" type="text"
+                                                    name="instagram_link"
                                                     value="{{ old('instagram_link', $setting->instagram_link ?? '') }}"
                                                     placeholder="https://instagram.com/..."
                                                     class="w-full h-12 px-4 rounded-xl border border-slate-200 outline-none" />
@@ -1240,11 +1251,13 @@
 
                                             {{-- FACEBOOK --}}
                                             <div>
-                                                <label class="block text-sm font-semibold mb-2">
+                                                <label for="reservationFacebookLink"
+                                                    class="block text-sm font-semibold mb-2">
                                                     Facebook
                                                 </label>
 
-                                                <input type="text" name="facebook_link"
+                                                <input id="reservationFacebookLink" type="text"
+                                                    name="facebook_link"
                                                     value="{{ old('facebook_link', $setting->facebook_link ?? '') }}"
                                                     placeholder="https://facebook.com/..."
                                                     class="w-full h-12 px-4 rounded-xl border border-slate-200 outline-none" />
@@ -1252,11 +1265,12 @@
 
                                             {{-- TIKTOK --}}
                                             <div>
-                                                <label class="block text-sm font-semibold mb-2">
+                                                <label for="reservationTiktokLink"
+                                                    class="block text-sm font-semibold mb-2">
                                                     TikTok
                                                 </label>
 
-                                                <input type="text" name="tiktok_link"
+                                                <input id="reservationTiktokLink" type="text" name="tiktok_link"
                                                     value="{{ old('tiktok_link', $setting->tiktok_link ?? '') }}"
                                                     placeholder="https://tiktok.com/@..."
                                                     class="w-full h-12 px-4 rounded-xl border border-slate-200 outline-none" />
@@ -1264,11 +1278,13 @@
 
                                             {{-- WHATSAPP --}}
                                             <div>
-                                                <label class="block text-sm font-semibold mb-2">
+                                                <label for="reservationWhatsappLink"
+                                                    class="block text-sm font-semibold mb-2">
                                                     WhatsApp Link
                                                 </label>
 
-                                                <input type="text" name="whatsapp_link"
+                                                <input id="reservationWhatsappLink" type="text"
+                                                    name="whatsapp_link"
                                                     value="{{ old('whatsapp_link', $setting->whatsapp_link ?? '') }}"
                                                     placeholder="https://wa.me/628..."
                                                     class="w-full h-12 px-4 rounded-xl border border-slate-200 outline-none" />
@@ -1308,11 +1324,12 @@
                                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                         {{-- BADGE --}}
                                         <div>
-                                            <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                            <label for="reservationCtaBadge"
+                                                class="block text-sm font-semibold text-slate-700 mb-2">
                                                 Badge
                                             </label>
 
-                                            <input type="text" name="cta_badge"
+                                            <input id="reservationCtaBadge" type="text" name="cta_badge"
                                                 value="{{ old('cta_badge', $setting->cta_badge ?? '') }}"
                                                 placeholder="BEST SERVICE"
                                                 class="w-full h-12 px-4 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
@@ -1320,11 +1337,12 @@
 
                                         {{-- JUDUL --}}
                                         <div>
-                                            <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                            <label for="reservationCtaTitle"
+                                                class="block text-sm font-semibold text-slate-700 mb-2">
                                                 Judul
                                             </label>
 
-                                            <input type="text" name="cta_title"
+                                            <input id="reservationCtaTitle" type="text" name="cta_title"
                                                 value="{{ old('cta_title', $setting->cta_title ?? '') }}"
                                                 placeholder="Jadikan Momen Anda Lebih Istimewa"
                                                 class="w-full h-12 px-4 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
@@ -1333,21 +1351,25 @@
 
                                     {{-- DESKRIPSI --}}
                                     <div>
-                                        <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                        <label for="reservationCtaDescription"
+                                            class="block text-sm font-semibold text-slate-700 mb-2">
                                             Deskripsi
                                         </label>
 
-                                        <textarea name="cta_description" rows="5" placeholder="Dari ulang tahun hingga gathering kantor..."
+                                        <textarea id="reservationCtaDescription" name="cta_description" rows="5"
+                                            placeholder="Dari ulang tahun hingga gathering kantor..."
                                             class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none resize-y focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">{{ old('cta_description', $setting->cta_description ?? '') }}</textarea>
                                     </div>
 
                                     {{-- LINK WHATSAPP --}}
                                     <div>
-                                        <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                        <label for="reservationCtaWhatsappLink"
+                                            class="block text-sm font-semibold text-slate-700 mb-2">
                                             Link WhatsApp
                                         </label>
 
-                                        <input type="text" name="cta_whatsapp_link"
+                                        <input id="reservationCtaWhatsappLink" type="text"
+                                            name="cta_whatsapp_link"
                                             value="{{ old('cta_whatsapp_link', $setting->cta_whatsapp_link ?? '') }}"
                                             placeholder="https://wa.me/628..."
                                             class="w-full h-12 px-4 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
@@ -1355,34 +1377,17 @@
 
                                     {{-- BACKGROUND CTA --}}
                                     <div>
-                                        <label class="block text-sm font-semibold text-slate-700 mb-3">
+                                        <p class="block text-sm font-semibold text-slate-700 mb-3">
                                             Background CTA
-                                        </label>
+                                        </p>
 
                                         <div class="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6 items-start">
                                             {{-- PREVIEW --}}
                                             <div>
                                                 @php
-                                                    $ctaBackground = $setting->cta_background_image ?? '';
-
-                                                    if (
-                                                        \Illuminate\Support\Str::startsWith($ctaBackground, [
-                                                            'http://',
-                                                            'https://',
-                                                        ])
-                                                    ) {
-                                                        $ctaBackgroundUrl = $ctaBackground;
-                                                    } elseif (
-                                                        \Illuminate\Support\Str::startsWith($ctaBackground, 'storage/')
-                                                    ) {
-                                                        $ctaBackgroundUrl = asset($ctaBackground);
-                                                    } elseif ($ctaBackground) {
-                                                        $ctaBackgroundUrl = asset(
-                                                            'storage/' . ltrim($ctaBackground, '/'),
-                                                        );
-                                                    } else {
-                                                        $ctaBackgroundUrl = '';
-                                                    }
+                                                    $ctaBackgroundUrl = $resolveLocalImageUrl(
+                                                        $setting->cta_background_image ?? '',
+                                                    );
                                                 @endphp
 
                                                 <div
@@ -1405,38 +1410,27 @@
                                                 </div>
                                             </div>
 
-                                            {{-- UPLOAD + URL --}}
+                                            {{-- UPLOAD --}}
                                             <div class="space-y-5">
                                                 {{-- UPLOAD --}}
                                                 <div>
-                                                    <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                                    <label for="ctaBackgroundFile"
+                                                        class="block text-sm font-semibold text-slate-700 mb-2">
                                                         Upload Background
                                                     </label>
 
                                                     <input type="file" name="cta_background_file"
                                                         id="ctaBackgroundFile"
                                                         accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                                                        class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium" />
-
-                                                    <p class="text-xs text-slate-400 mt-2">Format JPG, JPEG, PNG, atau
-                                                        WEBP. Maksimal 1 MB.</p>
+                                                        class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium"
+                                                        data-image-upload="true"
+                                                        data-error-message="ctaBackgroundSizeMessage" />
+                                                    <p class="mt-2 text-xs text-slate-500">Format JPG, JPEG, PNG, atau
+                                                        WebP. Maksimal 2 MB.</p>
 
                                                     <p id="ctaBackgroundSizeMessage"
-                                                        class="hidden mt-2 text-xs text-red-500">Ukuran file lebih dari
-                                                        1 MB. Harap kompres gambar terlebih dahulu.</p>
-                                                </div>
-
-                                                {{-- URL --}}
-                                                <div>
-                                                    <label class="block text-sm font-semibold text-slate-700 mb-2">
-                                                        Atau Gunakan URL
-                                                    </label>
-
-                                                    <input type="url" name="cta_background_url"
-                                                        id="ctaBackgroundUrl"
-                                                        value="{{ filter_var($ctaBackground, FILTER_VALIDATE_URL) ? $ctaBackground : '' }}"
-                                                        placeholder="https://contoh.com/cta-background.jpg"
-                                                        class="w-full h-12 px-4 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+                                                        class="hidden mt-2 text-xs text-red-500">Ukuran gambar maksimal
+                                                        2 MB. Pilih gambar yang lebih kecil.</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -1462,8 +1456,8 @@
 ========================================================== --}}
     <script>
         /* =========================================================
-                                                                                                       OPEN / CLOSE BOX
-                                                                                                    ========================================================== */
+                                                                                                                                                                           OPEN / CLOSE BOX
+                                                                                                                                                                        ========================================================== */
 
         function toggleBox(id) {
             const box = document.getElementById(id);
@@ -1492,327 +1486,199 @@
         }
 
         /* =========================================================
-           HEADER IMAGE PREVIEW
+           VALIDASI SEMUA UPLOAD GAMBAR (MAKSIMAL 2 MB)
         ========================================================== */
+        document.querySelectorAll('input[type="file"][data-image-upload="true"]').forEach(function(input) {
+            input.addEventListener("change", function() {
+                const file = this.files && this.files[0];
+                const message = this.dataset.errorMessage ?
+                    document.getElementById(this.dataset.errorMessage) :
+                    null;
 
-        const heroInput = document.getElementById("heroImageInput");
-
-        const heroPreview = document.getElementById("heroImagePreview");
-
-        const heroPlaceholder = document.getElementById("heroImagePlaceholder");
-
-        if (heroInput && heroPreview && heroPlaceholder) {
-            heroInput.addEventListener("input", function() {
-                const url = this.value.trim();
-
-                if (!url) {
-                    heroPreview.classList.add("hidden");
-
-                    heroPlaceholder.classList.remove("hidden");
-                    heroPlaceholder.classList.add("flex");
-
-                    heroPreview.removeAttribute("src");
-
+                if (!file) {
+                    if (message) message.classList.add("hidden");
                     return;
                 }
 
+                const extension = (file.name.split(".").pop() || "").toLowerCase();
+                const allowedExtensions = ["jpg", "jpeg", "png", "webp"];
+
+                if (!allowedExtensions.includes(extension)) {
+                    this.value = "";
+                    if (message) message.classList.add("hidden");
+                    alert("Format gambar harus JPG, JPEG, PNG, atau WebP.");
+                    return;
+                }
+
+                if (file.size > 2 * 1024 * 1024) {
+                    this.value = "";
+                    if (message) {
+                        message.textContent = "Ukuran gambar maksimal 2 MB. Pilih gambar yang lebih kecil.";
+                        message.classList.remove("hidden");
+                    } else {
+                        alert("Ukuran gambar maksimal 2 MB. Pilih gambar yang lebih kecil.");
+                    }
+                    return;
+                }
+
+                if (message) message.classList.add("hidden");
+            });
+        });
+
+        /* =========================================================
+           HEADER IMAGE PREVIEW
+        ========================================================== */
+        const heroInput = document.getElementById("heroImageInput");
+        const heroPreview = document.getElementById("heroImagePreview");
+        const heroPlaceholder = document.getElementById("heroImagePlaceholder");
+
+        if (heroInput && heroPreview && heroPlaceholder) {
+            heroInput.addEventListener("change", function() {
+                const file = this.files && this.files[0];
+                if (!file) return;
+
+                const objectUrl = URL.createObjectURL(file);
                 heroPreview.onload = function() {
                     heroPreview.classList.remove("hidden");
-
                     heroPlaceholder.classList.add("hidden");
                     heroPlaceholder.classList.remove("flex");
+                    URL.revokeObjectURL(objectUrl);
                 };
-
                 heroPreview.onerror = function() {
+                    URL.revokeObjectURL(objectUrl);
                     heroPreview.classList.add("hidden");
-
                     heroPlaceholder.classList.remove("hidden");
                     heroPlaceholder.classList.add("flex");
                 };
-
-                heroPreview.src = url;
+                heroPreview.src = objectUrl;
             });
         }
 
         /* =========================================================
            LOCATION IMAGE PREVIEW
         ========================================================== */
-
         const locationInput = document.getElementById("locationImageInput");
-
         const locationPreview = document.getElementById("locationImagePreview");
-
         const locationPlaceholder = document.getElementById("locationImagePlaceholder");
 
         if (locationInput && locationPreview && locationPlaceholder) {
-            locationInput.addEventListener("input", function() {
-                const url = this.value.trim();
+            locationInput.addEventListener("change", function() {
+                const file = this.files && this.files[0];
+                if (!file) return;
 
-                if (!url) {
-                    locationPreview.classList.add("hidden");
-
-                    locationPlaceholder.classList.remove("hidden");
-                    locationPlaceholder.classList.add("flex");
-
-                    return;
-                }
-
+                const objectUrl = URL.createObjectURL(file);
                 locationPreview.onload = function() {
                     locationPreview.classList.remove("hidden");
-
                     locationPlaceholder.classList.add("hidden");
                     locationPlaceholder.classList.remove("flex");
+                    URL.revokeObjectURL(objectUrl);
                 };
-
                 locationPreview.onerror = function() {
+                    URL.revokeObjectURL(objectUrl);
                     locationPreview.classList.add("hidden");
-
                     locationPlaceholder.classList.remove("hidden");
                     locationPlaceholder.classList.add("flex");
                 };
-
-                locationPreview.src = url;
+                locationPreview.src = objectUrl;
             });
         }
 
         /* =========================================================
-           STEP ICON PREVIEW
+           PREVIEW IKON CARA RESERVASI & KETENTUAN
         ========================================================== */
-
-        function setupIconPreview(fileId, urlId, previewId) {
-            const file = document.getElementById(fileId);
-
-            const url = document.getElementById(urlId);
-
+        function setupIconPreview(fileId, previewId) {
+            const fileInput = document.getElementById(fileId);
             const preview = document.getElementById(previewId);
 
-            if (!preview) {
-                return;
-            }
+            if (!fileInput || !preview) return;
 
-            if (file) {
-                file.addEventListener("change", function() {
-                    if (!this.files || !this.files[0]) {
-                        return;
-                    }
+            fileInput.addEventListener("change", function() {
+                const file = this.files && this.files[0];
+                if (!file) return;
 
-                    const objectUrl = URL.createObjectURL(this.files[0]);
-
-                    preview.innerHTML = "";
-
-                    const img = document.createElement("img");
-
-                    img.src = objectUrl;
-
-                    img.className = "max-w-24 max-h-24 object-contain";
-
-                    preview.appendChild(img);
-                });
-            }
-
-            if (url) {
-                url.addEventListener("input", function() {
-                    if (file && file.files && file.files.length > 0) {
-                        return;
-                    }
-
-                    const value = this.value.trim();
-
-                    if (!value) {
-                        return;
-                    }
-
-                    const img = document.createElement("img");
-
-                    img.src = value;
-
-                    img.className = "max-w-24 max-h-24 object-contain";
-
-                    img.onload = function() {
-                        preview.innerHTML = "";
-
-                        preview.appendChild(img);
-                    };
-                });
-            }
+                const objectUrl = URL.createObjectURL(file);
+                preview.innerHTML = "";
+                const img = document.createElement("img");
+                img.src = objectUrl;
+                img.className = "max-w-24 max-h-24 object-contain";
+                img.onload = function() {
+                    URL.revokeObjectURL(objectUrl);
+                };
+                preview.appendChild(img);
+            });
         }
 
-        setupIconPreview("addStepFile", "addStepUrl", "addStepPreview");
-
-        setupIconPreview("addTermFile", "addTermUrl", "addTermPreview");
+        setupIconPreview("addStepFile", "addStepPreview");
+        setupIconPreview("addTermFile", "addTermPreview");
 
         @foreach ($steps as $step)
-
-            setupIconPreview(
-                "stepFile{{ $step->id }}",
-                "stepUrl{{ $step->id }}",
-                "stepPreview{{ $step->id }}",
-            );
+            setupIconPreview("stepFile{{ $step->id }}", "stepPreview{{ $step->id }}");
         @endforeach
 
         @foreach ($terms as $term)
-
-            setupIconPreview(
-                "termFile{{ $term->id }}",
-                "termUrl{{ $term->id }}",
-                "termPreview{{ $term->id }}",
-            );
+            setupIconPreview("termFile{{ $term->id }}", "termPreview{{ $term->id }}");
         @endforeach
 
         /* =========================================================
-           AREA IMAGE PREVIEW
+           PREVIEW GAMBAR AREA RESTO
         ========================================================== */
-
         @foreach ($areas as $area)
+            const areaInput{{ $area->id }} = document.getElementById("areaInput{{ $area->id }}");
+            const areaPreview{{ $area->id }} = document.getElementById("areaPreview{{ $area->id }}");
+            const areaPlaceholder{{ $area->id }} = document.getElementById("areaPlaceholder{{ $area->id }}");
+            const areaCardPreview{{ $area->id }} = document.getElementById("areaCardPreview{{ $area->id }}");
+            const areaCardEmpty{{ $area->id }} = document.getElementById("areaCardEmpty{{ $area->id }}");
 
-            const areaInput{{ $area->id }} = document.getElementById(
-                "areaInput{{ $area->id }}",
-            );
+            if (areaInput{{ $area->id }} && areaPreview{{ $area->id }}) {
+                areaInput{{ $area->id }}.addEventListener("change", function() {
+                    const file = this.files && this.files[0];
+                    if (!file) return;
 
-            const areaPreview{{ $area->id }} =
-                document.getElementById("areaPreview{{ $area->id }}");
+                    const objectUrl = URL.createObjectURL(file);
+                    areaPreview{{ $area->id }}.src = objectUrl;
+                    areaPreview{{ $area->id }}.classList.remove("hidden");
+                    if (areaPlaceholder{{ $area->id }}) {
+                        areaPlaceholder{{ $area->id }}.classList.add("hidden");
+                        areaPlaceholder{{ $area->id }}.classList.remove("flex");
+                    }
 
-
-            const areaEmpty{{ $area->id }} = document.getElementById(
-                "areaPlaceholder{{ $area->id }}",
-            );
-
-
-            if (areaInput{{ $area->id }}) {
-                areaInput{{ $area->id }}.addEventListener(
-                    "input",
-                    function() {
-                        const url = this.value.trim();
-
-                        if (!url) {
-                            areaPreview{{ $area->id }}.classList.add(
-                                "hidden",
-                            );
-
-                            areaEmpty{{ $area->id }}.classList.remove(
-                                "hidden",
-                            );
-
-                            return;
-                        }
-
-                        areaPreview{{ $area->id }}.onload =
-                            function() {
-                                areaPreview{{ $area->id }}.classList.remove(
-                                    "hidden",
-                                );
-
-                                areaEmpty{{ $area->id }}.classList.add(
-                                    "hidden",
-                                );
-                            };
-
-                        areaPreview{{ $area->id }}.src = url;
-                    },
-                );
+                    if (areaCardPreview{{ $area->id }}) {
+                        areaCardPreview{{ $area->id }}.src = objectUrl;
+                        areaCardPreview{{ $area->id }}.classList.remove("hidden");
+                    }
+                    if (areaCardEmpty{{ $area->id }}) {
+                        areaCardEmpty{{ $area->id }}.classList.add("hidden");
+                    }
+                });
             }
         @endforeach
 
         /* =========================================================
-               CTA BACKGROUND IMAGE PREVIEW
-            ========================================================== */
-
+           PREVIEW BACKGROUND CTA
+        ========================================================== */
         const ctaBackgroundFile = document.getElementById("ctaBackgroundFile");
-
-        const ctaBackgroundUrl = document.getElementById("ctaBackgroundUrl");
-
         const ctaBackgroundPreview = document.getElementById("ctaBackgroundPreview");
+        const ctaBackgroundPlaceholder = document.getElementById("ctaBackgroundPlaceholder");
 
-        const ctaBackgroundPlaceholder = document.getElementById(
-            "ctaBackgroundPlaceholder",
-        );
-
-        const ctaBackgroundSizeMessage = document.getElementById(
-            "ctaBackgroundSizeMessage",
-        );
-
-        if (
-            ctaBackgroundFile &&
-            ctaBackgroundUrl &&
-            ctaBackgroundPreview &&
-            ctaBackgroundPlaceholder
-        ) {
-            // ================= FILE UPLOAD =================
+        if (ctaBackgroundFile && ctaBackgroundPreview && ctaBackgroundPlaceholder) {
             ctaBackgroundFile.addEventListener("change", function() {
-                const file = this.files[0];
-
-                if (!file) {
-                    return;
-                }
-
-                // Maksimal 1 MB
-                if (file.size > 1024 * 1024) {
-                    this.value = "";
-
-                    ctaBackgroundUrl.disabled = false;
-
-                    if (ctaBackgroundSizeMessage) {
-                        ctaBackgroundSizeMessage.classList.remove("hidden");
-                    }
-
-                    return;
-                }
-
-                if (ctaBackgroundSizeMessage) {
-                    ctaBackgroundSizeMessage.classList.add("hidden");
-                }
-
-                // File dipilih → URL dikosongkan
-                ctaBackgroundUrl.value = "";
-                ctaBackgroundUrl.disabled = true;
+                const file = this.files && this.files[0];
+                if (!file) return;
 
                 const objectUrl = URL.createObjectURL(file);
-
                 ctaBackgroundPreview.onload = function() {
                     ctaBackgroundPreview.classList.remove("hidden");
-
                     ctaBackgroundPlaceholder.classList.add("hidden");
                     ctaBackgroundPlaceholder.classList.remove("flex");
-
                     URL.revokeObjectURL(objectUrl);
                 };
-
-                ctaBackgroundPreview.src = objectUrl;
-            });
-
-            // ================= URL =================
-            ctaBackgroundUrl.addEventListener("input", function() {
-                const url = this.value.trim();
-
-                if (!url) {
-                    ctaBackgroundFile.disabled = false;
-
-                    if (ctaBackgroundSizeMessage) {
-                        ctaBackgroundSizeMessage.classList.add("hidden");
-                    }
-
-                    return;
-                }
-
-                // URL dipilih → file dikosongkan
-                ctaBackgroundFile.value = "";
-                ctaBackgroundFile.disabled = true;
-
-                ctaBackgroundPreview.onload = function() {
-                    ctaBackgroundPreview.classList.remove("hidden");
-
-                    ctaBackgroundPlaceholder.classList.add("hidden");
-                    ctaBackgroundPlaceholder.classList.remove("flex");
-                };
-
                 ctaBackgroundPreview.onerror = function() {
+                    URL.revokeObjectURL(objectUrl);
                     ctaBackgroundPreview.classList.add("hidden");
-
                     ctaBackgroundPlaceholder.classList.remove("hidden");
                     ctaBackgroundPlaceholder.classList.add("flex");
                 };
-
-                ctaBackgroundPreview.src = url;
+                ctaBackgroundPreview.src = objectUrl;
             });
         }
     </script>
@@ -1882,6 +1748,25 @@
                     saveAllButton.innerHTML = originalText;
                 }
             });
+        });
+    </script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const notification = document.getElementById(
+                "reservationSuccessNotification"
+            );
+
+            if (!notification) return;
+
+            setTimeout(() => {
+                notification.style.opacity = "0";
+                notification.style.transform = "translateY(-8px)";
+
+                setTimeout(() => {
+                    notification.remove();
+                }, 350);
+            }, 4000);
         });
     </script>
 </body>

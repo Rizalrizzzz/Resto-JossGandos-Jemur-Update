@@ -1777,14 +1777,6 @@
         window.addEventListener("resize", function() {
             teamIndex = Math.min(teamIndex, getTeamMaxIndex());
 
-            resetTeamCardHeights();
-
-            teamCards.forEach(function(card) {
-                if (card.classList.contains("team-active")) {
-                    adjustTeamCardHeight(card);
-                }
-            });
-
             updateTeamCarousel();
         });
 

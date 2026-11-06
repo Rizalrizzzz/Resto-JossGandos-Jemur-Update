@@ -61,7 +61,7 @@ class HomeController extends Controller
             'welcome_title' => 'nullable|string|max:255',
             'welcome_description' => 'nullable|string',
             'welcome_quote' => 'nullable|string|max:500',
-            'welcome_image' => 'nullable|string|max:500',
+            'welcome_image' => 'nullable|file|image|mimes:jpg,jpeg,png,webp|max:2048',
 
             // ================= KEUNGGULAN =================
             'feature_badge' => 'nullable|string|max:100',
@@ -71,7 +71,7 @@ class HomeController extends Controller
             'dish_badge' => 'nullable|string|max:100',
             'dish_title' => 'nullable|string|max:255',
             'dish_description' => 'nullable|string',
-            'dish_image' => 'nullable|string|max:500',
+            'dish_image' => 'nullable|file|image|mimes:jpg,jpeg,png,webp|max:2048',
 
             // ================= TESTIMONIAL =================
             'testimonial_badge' => 'nullable|string|max:100',
@@ -84,6 +84,8 @@ class HomeController extends Controller
         ]);
 
         $settings = HomeSetting::firstOrNew();
+        $oldWelcomeImage = $settings->welcome_image;
+        $oldDishImage = $settings->dish_image;
 
         // ================= HERO =================
         if ($request->has('hero_badge')) {
@@ -115,8 +117,10 @@ class HomeController extends Controller
             $settings->welcome_quote = $validated['welcome_quote'];
         }
 
-        if ($request->has('welcome_image')) {
-            $settings->welcome_image = $validated['welcome_image'];
+        if ($request->hasFile('welcome_image')) {
+            $settings->welcome_image = $request
+                ->file('welcome_image')
+                ->store('home/welcome', 'public');
         }
 
         // ================= KEUNGGULAN =================
@@ -141,8 +145,10 @@ class HomeController extends Controller
             $settings->dish_description = $validated['dish_description'];
         }
 
-        if ($request->has('dish_image')) {
-            $settings->dish_image = $validated['dish_image'];
+        if ($request->hasFile('dish_image')) {
+            $settings->dish_image = $request
+                ->file('dish_image')
+                ->store('home/dishes', 'public');
         }
 
         // ================= TESTIMONIAL =================
@@ -169,6 +175,11 @@ class HomeController extends Controller
 
         $settings->save();
 
+        // Hapus foto lokal lama hanya setelah record berhasil disimpan.
+        // URL eksternal tidak akan dihapus.
+        $this->deleteReplacedPublicFile($oldWelcomeImage, $settings->welcome_image);
+        $this->deleteReplacedPublicFile($oldDishImage, $settings->dish_image);
+
         return redirect()
             ->back()
             ->with('success', 'Pengaturan Home berhasil diperbarui.');
@@ -186,7 +197,7 @@ class HomeController extends Controller
         }
 
         $validated = $request->validate([
-            'icon' => 'required|file|mimes:png,jpg,jpeg,webp,svg|max:1024',
+            'icon' => 'required|file|mimes:png,jpg,jpeg,webp,svg|max:2048',
             'title' => 'required|string|max:255',
             'description' => 'required|string',
         ]);
@@ -214,7 +225,7 @@ class HomeController extends Controller
     // =========================================================
     // KEUNGGULAN - UPDATE
     // =========================================================
-    public function updateFeature(Request $request, $id)
+    public function updateFeature(Request $request, int $id)
     {
         if (! session()->has('account_id')) {
             return redirect()
@@ -223,7 +234,7 @@ class HomeController extends Controller
         }
 
         $validated = $request->validate([
-            'icon' => 'nullable|file|mimes:png,jpg,jpeg,webp,svg|max:1024',
+            'icon' => 'nullable|file|mimes:png,jpg,jpeg,webp,svg|max:2048',
             'title' => 'required|string|max:255',
             'description' => 'required|string',
         ]);
@@ -233,24 +244,19 @@ class HomeController extends Controller
         $feature->title = $validated['title'];
         $feature->description = $validated['description'];
 
-        // Kalau upload icon baru
+        // Simpan icon baru terlebih dahulu; file lama dihapus setelah save berhasil.
+        $oldIcon = $feature->icon;
         if ($request->hasFile('icon')) {
-
-            // Hapus icon lama
-            if (
-                $feature->icon &&
-                Storage::disk('public')->exists($feature->icon)
-            ) {
-                Storage::disk('public')->delete($feature->icon);
-            }
-
-            // Simpan icon baru
             $feature->icon = $request
                 ->file('icon')
                 ->store('home-features', 'public');
         }
 
         $feature->save();
+
+        if ($request->hasFile('icon')) {
+            $this->deleteReplacedPublicFile($oldIcon, $feature->icon);
+        }
 
         return redirect()
             ->back()
@@ -260,7 +266,7 @@ class HomeController extends Controller
     // =========================================================
     // KEUNGGULAN - HAPUS
     // =========================================================
-    public function destroyFeature($id)
+    public function destroyFeature(int $id)
     {
         if (! session()->has('account_id')) {
             return redirect()
@@ -318,7 +324,7 @@ class HomeController extends Controller
     // =========================================================
     // TESTIMONIAL - UPDATE
     // =========================================================
-    public function updateTestimonial(Request $request, $id)
+    public function updateTestimonial(Request $request, int $id)
     {
         if (! session()->has('account_id')) {
             return redirect()
@@ -345,7 +351,7 @@ class HomeController extends Controller
     // =========================================================
     // TESTIMONIAL - HAPUS
     // =========================================================
-    public function destroyTestimonial($id)
+    public function destroyTestimonial(int $id)
     {
         if (! session()->has('account_id')) {
             return redirect()
@@ -374,8 +380,8 @@ class HomeController extends Controller
         }
 
         $validated = $request->validate([
-            'icon' => 'nullable|file|mimes:png,jpg,jpeg,webp,svg|max:1024',
-            'icon_url' => 'nullable|url|max:500',
+            'icon' => 'nullable|file|mimes:png,jpg,jpeg,webp,svg|max:2048',
+            'icon_url' => 'prohibited',
             'title' => 'required|string|max:100',
             'description' => 'required|string|max:255',
         ]);
@@ -384,16 +390,11 @@ class HomeController extends Controller
 
         $iconPath = null;
 
-        // Kalau memilih upload file
+        // Ikon hanya diterima melalui unggahan file lokal.
         if ($request->hasFile('icon')) {
             $iconPath = $request
                 ->file('icon')
                 ->store('welcome-features', 'public');
-        }
-
-        // Kalau memilih URL
-        elseif (! empty($validated['icon_url'])) {
-            $iconPath = $validated['icon_url'];
         }
 
         WelcomeFeature::create([
@@ -412,7 +413,7 @@ class HomeController extends Controller
     // =========================================================
     // WELCOME FEATURE - UPDATE
     // =========================================================
-    public function updateWelcomeFeature(Request $request, $id)
+    public function updateWelcomeFeature(Request $request, int $id)
     {
         if (! session()->has('account_id')) {
             return redirect()
@@ -421,48 +422,30 @@ class HomeController extends Controller
         }
 
         $validated = $request->validate([
-            'icon' => 'nullable|file|mimes:png,jpg,jpeg,webp,svg|max:1024',
-            'icon_url' => 'nullable|url|max:500',
+            'icon' => 'nullable|file|mimes:png,jpg,jpeg,webp,svg|max:2048',
+            'icon_url' => 'prohibited',
             'title' => 'required|string|max:100',
             'description' => 'required|string|max:255',
         ]);
 
         $welcomeFeature = WelcomeFeature::findOrFail($id);
+        $oldIcon = $welcomeFeature->icon;
 
         $welcomeFeature->title = $validated['title'];
         $welcomeFeature->description = $validated['description'];
 
-        // Upload icon baru
+        // Upload ikon lokal baru; ikon lama dipertahankan jika tidak ada file baru.
         if ($request->hasFile('icon')) {
-
-            if (
-                $welcomeFeature->icon &&
-                ! filter_var($welcomeFeature->icon, FILTER_VALIDATE_URL) &&
-                Storage::disk('public')->exists($welcomeFeature->icon)
-            ) {
-                Storage::disk('public')->delete($welcomeFeature->icon);
-            }
-
             $welcomeFeature->icon = $request
                 ->file('icon')
                 ->store('welcome-features', 'public');
         }
 
-        // Atau gunakan URL icon
-        elseif (! empty($validated['icon_url'])) {
-
-            if (
-                $welcomeFeature->icon &&
-                ! filter_var($welcomeFeature->icon, FILTER_VALIDATE_URL) &&
-                Storage::disk('public')->exists($welcomeFeature->icon)
-            ) {
-                Storage::disk('public')->delete($welcomeFeature->icon);
-            }
-
-            $welcomeFeature->icon = $validated['icon_url'];
-        }
-
         $welcomeFeature->save();
+
+        if ($oldIcon !== $welcomeFeature->icon) {
+            $this->deleteReplacedPublicFile($oldIcon, $welcomeFeature->icon);
+        }
 
         return redirect()
             ->back()
@@ -472,7 +455,7 @@ class HomeController extends Controller
     // =========================================================
     // WELCOME FEATURE - HAPUS
     // =========================================================
-    public function destroyWelcomeFeature($id)
+    public function destroyWelcomeFeature(int $id)
     {
         if (! session()->has('account_id')) {
             return redirect()
@@ -496,5 +479,24 @@ class HomeController extends Controller
         return redirect()
             ->back()
             ->with('success', 'Keunggulan Welcome berhasil dihapus.');
+    }
+
+    /**
+     * Hapus file lama hanya jika berupa file lokal yang berbeda dari file baru.
+     * URL eksternal tidak pernah dihapus.
+     */
+    private function deleteReplacedPublicFile(?string $oldPath, ?string $newPath): void
+    {
+        if (
+            empty($oldPath) ||
+            $oldPath === $newPath ||
+            filter_var($oldPath, FILTER_VALIDATE_URL)
+        ) {
+            return;
+        }
+
+        if (Storage::disk('public')->exists($oldPath)) {
+            Storage::disk('public')->delete($oldPath);
+        }
     }
 }

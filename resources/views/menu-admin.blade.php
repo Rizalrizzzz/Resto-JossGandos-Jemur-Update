@@ -9,7 +9,7 @@
 
     <link rel="icon" type="image/png" href="{{ asset('img/logojossgandos.png') }}">
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     {{-- Unicons untuk Sidebar --}}
     <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css" />
@@ -107,7 +107,8 @@
 
                         {{-- ISI --}}
                         <div id="heroSetting" class="hidden border-t border-slate-100">
-                            <form action="{{ route('menu.settings.update') }}" method="POST">
+                            <form action="{{ route('menu.settings.update') }}" method="POST"
+                                enctype="multipart/form-data">
                                 @csrf
                                 @method ('PUT')
 
@@ -117,11 +118,12 @@
                                         <div class="space-y-5">
                                             {{-- LABEL --}}
                                             <div>
-                                                <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                                <label for="menuHeroBadge"
+                                                    class="block text-sm font-semibold text-slate-700 mb-2">
                                                     Label
                                                 </label>
 
-                                                <input type="text" name="hero_badge"
+                                                <input id="menuHeroBadge" type="text" name="hero_badge"
                                                     value="{{ old('hero_badge', $menuSetting->hero_badge ?? 'MENU KAMI') }}"
                                                     placeholder="Contoh: MENU KAMI"
                                                     class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
@@ -129,11 +131,12 @@
 
                                             {{-- JUDUL --}}
                                             <div>
-                                                <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                                <label for="menuHeroTitle"
+                                                    class="block text-sm font-semibold text-slate-700 mb-2">
                                                     Judul
                                                 </label>
 
-                                                <input type="text" name="hero_title"
+                                                <input id="menuHeroTitle" type="text" name="hero_title"
                                                     value="{{ old('hero_title', $menuSetting->hero_title ?? 'Cita Rasa Autentik Resto Joss Gandos') }}"
                                                     placeholder="Contoh: Cita Rasa Autentik Resto Joss Gandos"
                                                     class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
@@ -141,62 +144,58 @@
 
                                             {{-- DESKRIPSI --}}
                                             <div>
-                                                <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                                <label for="menuHeroDescription"
+                                                    class="block text-sm font-semibold text-slate-700 mb-2">
                                                     Deskripsi
                                                 </label>
 
-                                                <textarea name="hero_description" rows="6" placeholder="Masukkan deskripsi hero..."
+                                                <textarea id="menuHeroDescription" name="hero_description" rows="6" placeholder="Masukkan deskripsi hero..."
                                                     class="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none resize-y focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">{{ old('hero_description', $menuSetting->hero_description ?? 'Nikmati beragam hidangan pilihan Resto Joss Gandos yang diolah dari bahan berkualitas dengan cita rasa khas yang menggugah selera.') }}</textarea
                                                 >
                                             </div>
                                         </div>
 
-                                        {{-- KOLOM KANAN --}}
+                                        {{-- KOLOM KANAN: UPLOAD FOTO HERO --}}
                                         <div>
-                                            <label
-                                                class="block text-sm font-semibold text-slate-700 mb-2"
-                                            >
-                                                URL Background Hero
+                                            <label for="heroImageFile" class="block text-sm font-semibold text-slate-700 mb-2">
+                                                Upload Foto (JPG/PNG/WebP, maks 2MB)
                                             </label>
 
                                             <input
-                                                type="url"
-                                                name="hero_image"
-                                                id="heroImageUrl"
-                                                value="{{ old('hero_image', $menuSetting->hero_image ?? '') }}"
-                                                placeholder="https://..."
-                                                oninput="previewHeroImage()"
-                                                class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                                                type="file"
+                                                name="hero_image_file"
+                                                id="heroImageFile"
+                                                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                                onchange="previewHeroImageFile(this)"
+                                                class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl p-3 bg-white file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 file:font-semibold hover:file:bg-indigo-100"
                                             />
+
+                                            <p class="text-xs text-slate-400 mt-2">
+                                                Pilih foto maksimal 2 MB. Preview berubah setelah file dipilih.
+                                            </p>
 
                                             {{-- PREVIEW --}}
                                             <div class="mt-4">
-                                                <div
-                                                    class="relative w-full h-72 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50"
-                                                >
+                                                <div class="relative w-full h-72 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50">
                                                     <img
                                                         id="heroImagePreview"
-                                                        src="{{ old('hero_image', $menuSetting->hero_image ?? '') }}"
+                                                        src="{{ !empty($menuSetting->hero_image) ? asset('storage/' . ltrim(preg_replace('#^/?storage/#', '', $menuSetting->hero_image), '/')) : '' }}"
                                                         alt="Preview Hero"
-                                                        class="w-full h-full object-cover {{ empty(old('hero_image', $menuSetting->hero_image ?? '')) ? 'hidden' : '' }}"
+                                                        class="w-full h-full object-cover {{ empty($menuSetting->hero_image) ? 'hidden' : '' }}"
                                                     />
 
                                                     <div
                                                         id="heroImageEmpty"
-                                                        class="{{ !empty(old('hero_image', $menuSetting->hero_image ?? '')) ? 'hidden' : '' }} absolute inset-0 flex flex-col items-center justify-center text-slate-400"
+                                                        class="{{ !empty($menuSetting->hero_image) ? 'hidden' : '' }} absolute inset-0 flex flex-col items-center justify-center text-slate-400"
                                                     >
-                                                        <i
-                                                            data-lucide="image"
-                                                            class="w-10 h-10 mb-2"
-                                                        ></i>
-
-                                                        <span class="text-sm">
-                                                            Preview gambar akan
-                                                            tampil di sini
-                                                        </span>
+                                                        <i data-lucide="image" class="w-10 h-10 mb-2"></i>
+                                                        <span class="text-sm">Preview gambar akan tampil di sini</span>
                                                     </div>
                                                 </div>
                                             </div>
+                                            <p id="heroImageSizeMessage" class="hidden mt-2 text-xs text-red-500">
+                                                Ukuran file lebih dari 2 MB. Pilih foto maksimal 2 MB.
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -280,13 +279,13 @@
                                 <div class="p-6 space-y-5">
                                     {{-- JUDUL PROMO --}}
                                     <div>
-                                        <label
+                                        <label for="menuPromoTitle"
                                             class="block text-sm font-semibold text-slate-700 mb-2"
                                         >
                                             Judul Promo
                                         </label>
 
-                                        <input
+                                        <input id="menuPromoTitle"
                                             type="text"
                                             name="promo_title"
                                             value="{{ old('promo_title', $menuSetting->promo_title ?? 'Promo Bulan Ini') }}"
@@ -297,13 +296,13 @@
 
                                     {{-- JUDUL REKOMENDASI --}}
                                     <div>
-                                        <label
+                                        <label for="menuRecommendedTitle"
                                             class="block text-sm font-semibold text-slate-700 mb-2"
                                         >
                                             Judul Rekomendasi
                                         </label>
 
-                                        <input
+                                        <input id="menuRecommendedTitle"
                                             type="text"
                                             name="recommended_title"
                                             value="{{ old('recommended_title', $menuSetting->recommended_title ?? 'Rekomendasi Spesial Kami') }}"
@@ -314,13 +313,13 @@
 
                                     {{-- JUDUL MENU LAINNYA --}}
                                     <div>
-                                        <label
+                                        <label for="menuOtherTitle"
                                             class="block text-sm font-semibold text-slate-700 mb-2"
                                         >
                                             Judul Menu Lainnya
                                         </label>
 
-                                        <input
+                                        <input id="menuOtherTitle"
                                             type="text"
                                             name="menu_title"
                                             value="{{ old('menu_title', $menuSetting->menu_title ?? 'Menu Lainnya') }}"
@@ -382,7 +381,7 @@
                 </h2>
 
                 <p class="text-sm text-slate-500 mt-1">
-                    Atur gambar, informasi, dan link menu lengkap.
+                    Atur foto, informasi, dan link Google Drive menu lengkap.
                 </p>
             </div>
         </div>
@@ -402,6 +401,7 @@
         <form
             action="{{ route('menu.settings.update') }}"
             method="POST"
+            enctype="multipart/form-data"
         >
             @csrf
             @method('PUT')
@@ -415,13 +415,13 @@
 
                         {{-- BADGE --}}
                         <div>
-                            <label
+                            <label for="menuCtaBadge"
                                 class="block text-sm font-semibold text-slate-700 mb-2"
                             >
                                 Badge
                             </label>
 
-                            <input
+                            <input id="menuCtaBadge"
                                 type="text"
                                 name="cta_badge"
                                 value="{{ old('cta_badge', $menuSetting->cta_badge ?? '') }}"
@@ -432,13 +432,13 @@
 
                         {{-- JUDUL --}}
                         <div>
-                            <label
+                            <label for="menuCtaTitle"
                                 class="block text-sm font-semibold text-slate-700 mb-2"
                             >
                                 Judul
                             </label>
 
-                            <input
+                            <input id="menuCtaTitle"
                                 type="text"
                                 name="cta_title"
                                 value="{{ old('cta_title', $menuSetting->cta_title ?? '') }}"
@@ -449,13 +449,13 @@
 
                         {{-- DESKRIPSI --}}
                         <div>
-                            <label
+                            <label for="menuCtaDescription"
                                 class="block text-sm font-semibold text-slate-700 mb-2"
                             >
                                 Deskripsi
                             </label>
 
-                            <textarea
+                            <textarea id="menuCtaDescription"
                                 name="cta_description"
                                 rows="5"
                                 placeholder="Masukkan deskripsi menu lengkap..."
@@ -465,11 +465,12 @@
 
                                             {{-- LINK GOOGLE DRIVE --}}
                                             <div>
-                                                <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                                <label for="menuCtaLink"
+                                                    class="block text-sm font-semibold text-slate-700 mb-2">
                                                     Link Google Drive
                                                 </label>
 
-                                                <input type="url" name="cta_link"
+                                                <input id="menuCtaLink" type="url" name="cta_link"
                                                     value="{{ old('cta_link', $menuSetting->cta_link ?? '') }}"
                                                     placeholder="https://drive.google.com/..."
                                                     class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
@@ -477,36 +478,41 @@
 
                                         </div>
 
-                                        {{-- KOLOM KANAN --}}
+                                        {{-- KOLOM KANAN: UPLOAD FOTO MENU LENGKAP --}}
                                         <div>
-                                            <label class="block text-sm font-semibold text-slate-700 mb-2">
-                                                URL Gambar CTA
+                                            <label for="ctaImageFile"
+                                                class="block text-sm font-semibold text-slate-700 mb-2">
+                                                Upload Foto (JPG/PNG/WebP, maks 2MB)
                                             </label>
 
-                                            <input type="url" name="cta_image" id="ctaImageUrl"
-                                                value="{{ old('cta_image', $menuSetting->cta_image ?? '') }}"
-                                                placeholder="https://..." oninput="previewCtaImage()"
-                                                class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+                                            <input type="file" name="cta_image_file" id="ctaImageFile"
+                                                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                                onchange="previewCtaImageFile(this)"
+                                                class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl p-3 bg-white file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 file:font-semibold hover:file:bg-indigo-100" />
+
+                                            <p class="text-xs text-slate-400 mt-2">
+                                                Pilih foto maksimal 2 MB. Preview berubah setelah file dipilih.
+                                            </p>
 
                                             {{-- PREVIEW --}}
                                             <div class="mt-4">
                                                 <div
                                                     class="relative w-full h-72 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50">
                                                     <img id="ctaImagePreview"
-                                                        src="{{ old('cta_image', $menuSetting->cta_image ?? '') }}"
+                                                        src="{{ !empty($menuSetting->cta_image) ? asset('storage/' . ltrim(preg_replace('#^/?storage/#', '', $menuSetting->cta_image), '/')) : '' }}"
                                                         alt="Preview CTA"
-                                                        class="w-full h-full object-cover {{ empty(old('cta_image', $menuSetting->cta_image ?? '')) ? 'hidden' : '' }}" />
+                                                        class="w-full h-full object-cover {{ empty($menuSetting->cta_image) ? 'hidden' : '' }}" />
 
                                                     <div id="ctaImageEmpty"
-                                                        class="{{ !empty(old('cta_image', $menuSetting->cta_image ?? '')) ? 'hidden' : '' }} absolute inset-0 flex flex-col items-center justify-center text-slate-400">
+                                                        class="{{ !empty($menuSetting->cta_image) ? 'hidden' : '' }} absolute inset-0 flex flex-col items-center justify-center text-slate-400">
                                                         <i data-lucide="image" class="w-10 h-10 mb-2"></i>
-
-                                                        <span class="text-sm">
-                                                            Preview gambar akan tampil di sini
-                                                        </span>
+                                                        <span class="text-sm">Preview gambar akan tampil di sini</span>
                                                     </div>
                                                 </div>
                                             </div>
+                                            <p id="ctaImageSizeMessage" class="hidden mt-2 text-xs text-red-500">
+                                                Ukuran file lebih dari 2 MB. Pilih foto maksimal 2 MB.
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -571,11 +577,12 @@
                                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
                                         {{-- JUDUL SECTION --}}
                                         <div>
-                                            <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                            <label for="packageTitle"
+                                                class="block text-sm font-semibold text-slate-700 mb-2">
                                                 Judul Section
                                             </label>
 
-                                            <input type="text" name="package_title"
+                                            <input id="packageTitle" type="text" name="package_title"
                                                 value="{{ old('package_title', $menuSetting->package_title ?? 'Paket & Layanan') }}"
                                                 placeholder="Contoh: Paket & Layanan"
                                                 class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
@@ -583,11 +590,13 @@
 
                                         {{-- DESKRIPSI SECTION --}}
                                         <div>
-                                            <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                            <label for="packageDescription"
+                                                class="block text-sm font-semibold text-slate-700 mb-2">
                                                 Deskripsi Section
                                             </label>
 
-                                            <textarea name="package_description" rows="3" placeholder="Masukkan deskripsi section..."
+                                            <textarea id="packageDescription" name="package_description" rows="3"
+                                                placeholder="Masukkan deskripsi section..."
                                                 class="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none resize-y focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">{{ old('package_description', $menuSetting->package_description ?? '') }}</textarea
                                             >
                                         </div>
@@ -631,11 +640,11 @@
                                         >
                                             {{-- ================= IKON ================= --}}
                                             <div>
-                                                <label
+                                                <p
                                                     class="block text-sm font-semibold text-slate-700 mb-3"
                                                 >
                                                     Ikon
-                                                </label>
+                                                </p>
 
                                                 {{-- PREVIEW --}}
                                                 <div
@@ -644,9 +653,7 @@
                                                     @if (!empty($menuSetting->package_menu_icon))
 <img
                                                             id="packageMenuIconPreview"
-                                                           src="{{ \Illuminate\Support\Str::startsWith($menuSetting->package_menu_icon, ['http://', 'https://'])
-                                                               ? $menuSetting->package_menu_icon
-                                                               : asset('storage/' . ltrim(preg_replace('#^/?storage/#', '', $menuSetting->package_menu_icon), '/')) }}"
+                                                           src="{{ asset('storage/' . ltrim(preg_replace('#^/?storage/#', '', $menuSetting->package_menu_icon), '/')) }}"
                                                             alt="Preview Ikon Package Menu"
                                                             class="w-full h-full object-contain p-5"
                                                         />
@@ -671,33 +678,20 @@
                                                         )
                                                     "
                                                     class="block w-full text-sm text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-600 file:font-semibold hover:file:bg-indigo-100"
-                                                />
-
-                                                {{-- URL --}}
-                                                <input
-                                                    type="url"
-                                                    name="package_menu_icon_url"
-                                                    placeholder="URL ikon"
-                                                    oninput="
-                                                        previewPackageMenuIconUrl(
-                                                            this,
-                                                        )
-                                                    "
-                                                    class="w-full h-10 px-3 mt-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                                                />
+                                                / aria-label="Upload ikon Package Menu">
                                             </div>
 
                                             {{-- ================= KONTEN ================= --}}
                                             <div class="space-y-4">
                                                 {{-- JUDUL --}}
                                                 <div>
-                                                    <label
+                                                    <label for="packageMenuTitle"
                                                         class="block text-sm font-semibold text-slate-700 mb-2"
                                                     >
                                                         Judul
                                                     </label>
 
-                                                    <input
+                                                    <input id="packageMenuTitle"
                                                         type="text"
                                                         name="package_menu_title"
                                                         value="{{ old('package_menu_title', $menuSetting->package_menu_title ?? 'Package Menu') }}"
@@ -708,13 +702,13 @@
 
                                                 {{-- DESKRIPSI --}}
                                                 <div>
-                                                    <label
+                                                    <label for="packageMenuDescription"
                                                         class="block text-sm font-semibold text-slate-700 mb-2"
                                                     >
                                                         Deskripsi
                                                     </label>
 
-                                                    <textarea
+                                                    <textarea id="packageMenuDescription"
                                                         name="package_menu_description"
                                                         rows="4"
                                                         placeholder="Masukkan deskripsi..."
@@ -764,11 +758,11 @@
                                         >
                                             {{-- ================= IKON ================= --}}
                                             <div>
-                                                <label
+                                                <p
                                                     class="block text-sm font-semibold text-slate-700 mb-3"
                                                 >
                                                     Ikon
-                                                </label>
+                                                </p>
 
                                                 {{-- PREVIEW --}}
                                                 <div
@@ -777,9 +771,7 @@
                                                     @if (!empty($menuSetting->box_package_icon))
 <img
                                                             id="boxPackageIconPreview"
-                                                            src="{{ \Illuminate\Support\Str::startsWith($menuSetting->box_package_icon, ['http://', 'https://'])
-                                                                ? $menuSetting->box_package_icon
-                                                                : asset('storage/' . ltrim(preg_replace('#^/?storage/#', '', $menuSetting->box_package_icon), '/')) }}"
+                                                            src="{{ asset('storage/' . ltrim(preg_replace('#^/?storage/#', '', $menuSetting->box_package_icon), '/')) }}"
                                                             alt="Preview Ikon Box Package"
                                                             class="w-full h-full object-contain p-5"
                                                         />
@@ -804,33 +796,21 @@
                                                         )
                                                     "
                                                     class="block w-full text-sm text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-600 file:font-semibold hover:file:bg-indigo-100"
-                                                />
+                                                / aria-label="Upload ikon Box Package">
 
-                                                {{-- URL --}}
-                                                <input
-                                                    type="url"
-                                                    name="box_package_icon_url"
-                                                    placeholder="URL ikon"
-                                                    oninput="
-                                                        previewBoxPackageIconUrl(
-                                                            this,
-                                                        )
-                                                    "
-                                                    class="w-full h-10 px-3 mt-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                                                />
                                             </div>
 
                                             {{-- ================= KONTEN ================= --}}
                                             <div class="space-y-4">
                                                 {{-- JUDUL --}}
                                                 <div>
-                                                    <label
+                                                    <label for="boxPackageTitle"
                                                         class="block text-sm font-semibold text-slate-700 mb-2"
                                                     >
                                                         Judul
                                                     </label>
 
-                                                    <input
+                                                    <input id="boxPackageTitle"
                                                         type="text"
                                                         name="box_package_title"
                                                         value="{{ old('box_package_title', $menuSetting->box_package_title ?? 'Box Package') }}"
@@ -841,13 +821,13 @@
 
                                                 {{-- DESKRIPSI --}}
                                                 <div>
-                                                    <label
+                                                    <label for="boxPackageDescription"
                                                         class="block text-sm font-semibold text-slate-700 mb-2"
                                                     >
                                                         Deskripsi
                                                     </label>
 
-                                                    <textarea
+                                                    <textarea id="boxPackageDescription"
                                                         name="box_package_description"
                                                         rows="4"
                                                         placeholder="Masukkan deskripsi..."
@@ -897,11 +877,11 @@
                                         >
                                             {{-- ================= IKON ================= --}}
                                             <div>
-                                                <label
+                                                <p
                                                     class="block text-sm font-semibold text-slate-700 mb-3"
                                                 >
                                                     Ikon
-                                                </label>
+                                                </p>
 
                                                 {{-- PREVIEW --}}
                                                 <div
@@ -910,9 +890,7 @@
                                                     @if (!empty($menuSetting->wedding_package_icon))
 <img
                                                             id="weddingPackageIconPreview"
-                                                            src="{{ \Illuminate\Support\Str::startsWith($menuSetting->wedding_package_icon, ['http://', 'https://'])
-                                                                ? $menuSetting->wedding_package_icon
-                                                                : asset('storage/' . ltrim(preg_replace('#^/?storage/#', '', $menuSetting->wedding_package_icon), '/')) }}"
+                                                            src="{{ asset('storage/' . ltrim(preg_replace('#^/?storage/#', '', $menuSetting->wedding_package_icon), '/')) }}"
                                                             alt="Preview Ikon Wedding Package"
                                                             class="w-full h-full object-contain p-5"
                                                         />
@@ -937,33 +915,21 @@
                                                         )
                                                     "
                                                     class="block w-full text-sm text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-600 file:font-semibold hover:file:bg-indigo-100"
-                                                />
+                                                / aria-label="Upload ikon Wedding Package">
 
-                                                {{-- URL --}}
-                                                <input
-                                                    type="url"
-                                                    name="wedding_package_icon_url"
-                                                    placeholder="URL ikon"
-                                                    oninput="
-                                                        previewWeddingPackageIconUrl(
-                                                            this,
-                                                        )
-                                                    "
-                                                    class="w-full h-10 px-3 mt-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                                                />
                                             </div>
 
                                             {{-- ================= KONTEN ================= --}}
                                             <div class="space-y-4">
                                                 {{-- JUDUL --}}
                                                 <div>
-                                                    <label
+                                                    <label for="weddingPackageTitle"
                                                         class="block text-sm font-semibold text-slate-700 mb-2"
                                                     >
                                                         Judul
                                                     </label>
 
-                                                    <input
+                                                    <input id="weddingPackageTitle"
                                                         type="text"
                                                         name="wedding_package_title"
                                                         value="{{ old('wedding_package_title', $menuSetting->wedding_package_title ?? 'Wedding Package') }}"
@@ -974,13 +940,13 @@
 
                                                 {{-- DESKRIPSI --}}
                                                 <div>
-                                                    <label
+                                                    <label for="weddingPackageDescription"
                                                         class="block text-sm font-semibold text-slate-700 mb-2"
                                                     >
                                                         Deskripsi
                                                     </label>
 
-                                                    <textarea
+                                                    <textarea id="weddingPackageDescription"
                                                         name="wedding_package_description"
                                                         rows="4"
                                                         placeholder="Masukkan deskripsi..."
@@ -1128,17 +1094,13 @@
                                             @php
                                                 $imagePath = $menu->image_path ?? '';
 
-                                                if (
-                                                    \Illuminate\Support\Str::startsWith($imagePath, [
-                                                        'http://',
-                                                        'https://',
-                                                    ])
-                                                ) {
-                                                    $imageUrl = $imagePath;
-                                                } elseif (\Illuminate\Support\Str::startsWith($imagePath, 'storage/')) {
+                                                if (\Illuminate\Support\Str::startsWith($imagePath, 'storage/')) {
                                                     $imageUrl = asset($imagePath);
                                                 } else {
-                                                    $imageUrl = asset('storage/' . ltrim($imagePath, '/'));
+                                                    $imageUrl = asset(
+                                                        'storage/' .
+                                                            ltrim(preg_replace('#^/?storage/#', '', $imagePath), '/'),
+                                                    );
                                                 }
                                             @endphp
 
@@ -1349,11 +1311,11 @@
                                                 <div class="p-6 space-y-5">
                                                     {{-- FOTO MENU --}}
                                                     <div>
-                                                        <label
+                                                        <p
                                                             class="block text-sm font-medium mb-3"
                                                         >
                                                             Foto Menu
-                                                        </label>
+                                                        </p>
 
                                                         <div
                                                             class="grid grid-cols-1 sm:grid-cols-[220px_1fr] gap-7 items-start"
@@ -1380,43 +1342,28 @@
                                                                 class="space-y-4"
                                                             >
                                                                 <div>
-                                                                    <label
+                                                                    <label for="addImageFile"
                                                                         class="block text-sm font-medium mb-2"
                                                                     >
-                                                                        Upload
-                                                                        File
+                                                                        Upload Foto (JPG/PNG/WebP, maks 2MB)
                                                                     </label>
                                                                     <input
                                                                         type="file"
                                                                         name="image_file"
                                                                         id="addImageFile"
                                                                         accept=".jpg,.jpeg,.png,.webp"
+                                                                        required
                                                                         onchange="
                                                                             handleAddMenuFile()
                                                                         "
                                                                         class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium"
                                                                     />
-                                                                    <p id="addImageSizeMessage" class="hidden mt-2 text-xs text-red-500">Ukuran file lebih dari 1 MB. Harap kompres gambar terlebih dahulu hingga maksimal 1 MB.</p>
-                                                                </div>
-
-                                                                <div>
-                                                                    <label
-                                                                        class="block text-sm font-medium mb-2"
-                                                                    >
-                                                                        Atau
-                                                                        Gunakan
-                                                                        URL
-                                                                    </label>
-                                                                    <input
-                                                                        type="url"
-                                                                        name="image_path"
-                                                                        id="addImageUrl"
-                                                                        oninput="
-                                                                            previewAddMenuUrl()
-                                                                        "
-                                                                        placeholder="https://contoh.com/foto.jpg"
-                                                                        class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                                                                    />
+                                                                    <p id="addImageSizeMessage" class="hidden mt-2 text-xs text-red-500">
+                                                                        Ukuran file lebih dari 2 MB. Pilih foto maksimal 2 MB.
+                                                                    </p>
+                                                                    <p class="text-xs text-slate-400 mt-2">
+                                                                        Pilih foto maksimal 2 MB. Preview berubah setelah file dipilih.
+                                                                    </p>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1424,13 +1371,13 @@
 
                                                     {{-- NAMA --}}
                                                     <div>
-                                                        <label
+                                                        <label for="addMenuTitle"
                                                             class="block text-sm font-medium mb-2"
                                                         >
                                                             Nama Menu
                                                         </label>
 
-                                                        <input
+                                                        <input id="addMenuTitle"
                                                             type="text"
                                                             name="title"
                                                             required
@@ -1441,13 +1388,13 @@
 
                                                     {{-- DESKRIPSI --}}
                                                     <div>
-                                                        <label
+                                                        <label for="addMenuDescription"
                                                             class="block text-sm font-medium mb-2"
                                                         >
                                                             Deskripsi
                                                         </label>
 
-                                                        <textarea
+                                                        <textarea id="addMenuDescription"
                                                             name="description"
                                                             rows="4"
                                                             placeholder="Masukkan deskripsi menu..."
@@ -1464,10 +1411,13 @@
                                                     rekomendasi.</p>
                                             </div>
 
-                                            <label class="relative inline-flex items-center cursor-pointer">
+                                            <label for="addRecommended"
+                                                class="relative inline-flex items-center cursor-pointer">
                                                 <input type="hidden" name="is_recommended" value="0" />
 
                                                 <input type="checkbox" name="is_recommended" value="1"
+                                                    id="addRecommended"
+                                                    aria-label="Tampilkan sebagai menu rekomendasi"
                                                     class="sr-only peer" />
 
                                                 <div
@@ -1478,7 +1428,7 @@
 
                                         {{-- HARGA --}}
                                         <div>
-                                            <label class="block text-sm font-medium mb-2">
+                                            <label for="addPrice" class="block text-sm font-medium mb-2">
                                                 Harga
                                             </label>
 
@@ -1496,11 +1446,11 @@
 
                                         {{-- KATEGORI --}}
                                         <div>
-                                            <label class="block text-sm font-medium mb-2">
+                                            <label for="addCategory" class="block text-sm font-medium mb-2">
                                                 Kategori
                                             </label>
 
-                                            <select name="category" required
+                                            <select id="addCategory" name="category" required
                                                 class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none">
                                                 <option value="makanan">
                                                     Makanan
@@ -1558,9 +1508,9 @@
                                     <div class="p-6 space-y-5">
                                         {{-- FOTO MENU --}}
                                         <div>
-                                            <label class="block text-sm font-medium mb-3">
+                                            <p class="block text-sm font-medium mb-3">
                                                 Foto Menu
-                                            </label>
+                                            </p>
 
                                             <div class="grid grid-cols-1 sm:grid-cols-[220px_1fr] gap-7 items-start">
                                                 {{-- PREVIEW SELALU TERSEDIA --}}
@@ -1576,9 +1526,9 @@
 
                                                 <div class="space-y-4">
                                                     <div>
-                                                        <label class="block text-sm font-medium mb-2">
-                                                            Ganti
-                                                            File
+                                                        <label for="updateImageFile"
+                                                            class="block text-sm font-medium mb-2">
+                                                            Upload Foto (JPG/PNG/WebP, maks 2MB)
                                                         </label>
                                                         <input type="file" name="image_file" id="updateImageFile"
                                                             accept=".jpg,.jpeg,.png,.webp"
@@ -1587,23 +1537,13 @@
                                                                         "
                                                             class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium" />
                                                         <p id="updateImageSizeMessage"
-                                                            class="hidden mt-2 text-xs text-red-500">Ukuran file lebih
-                                                            dari 1 MB. Harap kompres gambar terlebih dahulu hingga
-                                                            maksimal 1 MB.</p>
-                                                    </div>
-
-                                                    <div>
-                                                        <label class="block text-sm font-medium mb-2">
-                                                            Atau
-                                                            Gunakan
-                                                            URL
-                                                        </label>
-                                                        <input type="url" name="image_path" id="updateImage"
-                                                            oninput="
-                                                                            previewUpdateMenuUrl()
-                                                                        "
-                                                            placeholder="https://contoh.com/foto.jpg"
-                                                            class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+                                                            class="hidden mt-2 text-xs text-red-500">
+                                                            Ukuran file lebih dari 2 MB. Pilih foto maksimal 2 MB.
+                                                        </p>
+                                                        <p class="text-xs text-slate-400 mt-2">
+                                                            Pilih foto maksimal 2 MB. Preview berubah setelah file
+                                                            dipilih.
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1611,7 +1551,7 @@
 
                                         {{-- NAMA --}}
                                         <div>
-                                            <label class="block text-sm font-medium mb-2">
+                                            <label for="updateTitle" class="block text-sm font-medium mb-2">
                                                 Nama Menu
                                             </label>
 
@@ -1621,7 +1561,7 @@
 
                                         {{-- DESKRIPSI --}}
                                         <div>
-                                            <label class="block text-sm font-medium mb-2">
+                                            <label for="updateDescription" class="block text-sm font-medium mb-2">
                                                 Deskripsi
                                             </label>
 
@@ -1638,10 +1578,12 @@
                                                     rekomendasi.</p>
                                             </div>
 
-                                            <label class="relative inline-flex items-center cursor-pointer">
+                                            <label for="updateRecommended"
+                                                class="relative inline-flex items-center cursor-pointer">
                                                 <input type="hidden" name="is_recommended" value="0" />
 
                                                 <input type="checkbox" name="is_recommended" value="1"
+                                                    aria-label="Tampilkan sebagai menu rekomendasi"
                                                     id="updateRecommended" class="sr-only peer" />
 
                                                 <div
@@ -1652,7 +1594,7 @@
 
                                         {{-- HARGA --}}
                                         <div>
-                                            <label class="block text-sm font-medium mb-2">
+                                            <label for="updatePrice" class="block text-sm font-medium mb-2">
                                                 Harga
                                             </label>
 
@@ -1670,7 +1612,7 @@
 
                                         {{-- KATEGORI --}}
                                         <div>
-                                            <label class="block text-sm font-medium mb-2">
+                                            <label for="updateCategory" class="block text-sm font-medium mb-2">
                                                 Kategori
                                             </label>
 
@@ -1778,6 +1720,30 @@
                                 lucide.createIcons();
                             }
 
+                            // Simpan kategori yang sedang dipilih saat form edit menu dikirim.
+                            const updateMenuForm = document.getElementById("updateForm");
+                            const menuCategoryFilter = document.getElementById("categoryFilter");
+
+                            if (updateMenuForm && menuCategoryFilter) {
+                                updateMenuForm.addEventListener("submit", function() {
+                                    sessionStorage.setItem(
+                                        "menuCategoryFilterAfterUpdate",
+                                        menuCategoryFilter.value
+                                    );
+                                });
+                            }
+
+                            // Kembalikan kategori setelah halaman selesai di-refresh/redirect.
+                            const savedMenuCategoryFilter = sessionStorage.getItem(
+                                "menuCategoryFilterAfterUpdate"
+                            );
+
+                            if (savedMenuCategoryFilter && menuCategoryFilter) {
+                                menuCategoryFilter.value = savedMenuCategoryFilter;
+                                sessionStorage.removeItem("menuCategoryFilterAfterUpdate");
+                                filterMenus();
+                            }
+
                             /* ==============================
                                TAMBAH
                             ============================== */
@@ -1802,7 +1768,6 @@
 
                             function handleAddMenuFile() {
                                 const fileInput = document.getElementById("addImageFile");
-                                const urlInput = document.getElementById("addImageUrl");
                                 const image = document.getElementById("addPreviewImage");
                                 const text = document.getElementById("addPreviewText");
                                 const message = document.getElementById("addImageSizeMessage");
@@ -1810,19 +1775,16 @@
 
                                 if (!file) return;
 
-                                if (file.size > 1024 * 1024) {
+                                if (file.size > 2 * 1024 * 1024) {
                                     fileInput.value = "";
                                     message.classList.remove("hidden");
                                     image.src = "";
                                     image.classList.add("hidden");
                                     text.classList.remove("hidden");
-                                    urlInput.disabled = false;
                                     return;
                                 }
 
                                 message.classList.add("hidden");
-                                urlInput.value = "";
-                                urlInput.disabled = true;
 
                                 const reader = new FileReader();
                                 reader.onload = function(event) {
@@ -1831,36 +1793,6 @@
                                     text.classList.add("hidden");
                                 };
                                 reader.readAsDataURL(file);
-                            }
-
-                            function previewAddMenuUrl() {
-                                const fileInput = document.getElementById("addImageFile");
-                                const urlInput = document.getElementById("addImageUrl");
-                                const image = document.getElementById("addPreviewImage");
-                                const text = document.getElementById("addPreviewText");
-
-                                const url = urlInput.value.trim();
-
-                                if (!url) {
-                                    fileInput.disabled = false;
-                                    image.src = "";
-                                    image.classList.add("hidden");
-                                    text.classList.remove("hidden");
-                                    return;
-                                }
-
-                                fileInput.value = "";
-                                fileInput.disabled = true;
-
-                                image.onload = function() {
-                                    image.classList.remove("hidden");
-                                    text.classList.add("hidden");
-                                };
-                                image.onerror = function() {
-                                    image.classList.add("hidden");
-                                    text.classList.remove("hidden");
-                                };
-                                image.src = url;
                             }
 
                             /* ==============================
@@ -1899,7 +1831,6 @@
                                 document.getElementById("updateRecommended").checked =
                                     menu.is_recommended == 1;
 
-                                const updateImageUrl = document.getElementById("updateImage");
                                 const updateImageFile = document.getElementById("updateImageFile");
                                 const updatePreviewImage = document.getElementById("updatePreviewImage");
                                 const updatePreviewText = document.getElementById("updatePreviewText");
@@ -1907,31 +1838,18 @@
                                     "updateImageSizeMessage",
                                 );
 
-                                const currentImagePath = menu.image_path ?? "";
-
-                                const isRemoteImage = /^https?:\/\//i.test(currentImagePath);
-
-                                updateImageUrl.value = isRemoteImage ? currentImagePath : "";
-                                updateImageUrl.disabled = false;
-
                                 updateImageFile.value = "";
-                                updateImageFile.disabled = false;
-
                                 updateImageSizeMessage.classList.add("hidden");
 
                                 if (menu.image_path) {
-                                    const imagePath = menu.image_path;
+                                    const imagePath = String(menu.image_path);
 
-                                    if (
-                                        imagePath.startsWith("http://") ||
-                                        imagePath.startsWith("https://")
-                                    ) {
-                                        updatePreviewImage.src = imagePath;
-                                    } else if (imagePath.startsWith("storage/")) {
-                                        updatePreviewImage.src = "/" + imagePath;
-                                    } else {
-                                        updatePreviewImage.src = "/storage/" + imagePath;
-                                    }
+                                    const cleanPath = imagePath
+                                        .replace(/^\/?storage\//, "")
+                                        .replace(/^public\/storage\//, "")
+                                        .replace(/^public\//, "")
+                                        .replace(/^\/+/, "");
+                                    updatePreviewImage.src = "/storage/" + cleanPath;
 
                                     updatePreviewImage.classList.remove("hidden");
                                     updatePreviewText.classList.add("hidden");
@@ -1954,7 +1872,6 @@
 
                             function handleUpdateMenuFile() {
                                 const fileInput = document.getElementById("updateImageFile");
-                                const urlInput = document.getElementById("updateImage");
                                 const image = document.getElementById("updatePreviewImage");
                                 const text = document.getElementById("updatePreviewText");
                                 const message = document.getElementById("updateImageSizeMessage");
@@ -1962,16 +1879,13 @@
 
                                 if (!file) return;
 
-                                if (file.size > 1024 * 1024) {
+                                if (file.size > 2 * 1024 * 1024) {
                                     fileInput.value = "";
                                     message.classList.remove("hidden");
-                                    urlInput.disabled = false;
                                     return;
                                 }
 
                                 message.classList.add("hidden");
-                                urlInput.value = "";
-                                urlInput.disabled = true;
 
                                 const reader = new FileReader();
                                 reader.onload = function(event) {
@@ -1980,33 +1894,6 @@
                                     text.classList.add("hidden");
                                 };
                                 reader.readAsDataURL(file);
-                            }
-
-                            function previewUpdateMenuUrl() {
-                                const fileInput = document.getElementById("updateImageFile");
-                                const urlInput = document.getElementById("updateImage");
-                                const image = document.getElementById("updatePreviewImage");
-                                const text = document.getElementById("updatePreviewText");
-
-                                const url = urlInput.value.trim();
-
-                                if (!url) {
-                                    fileInput.disabled = false;
-                                    return;
-                                }
-
-                                fileInput.value = "";
-                                fileInput.disabled = true;
-
-                                image.onload = function() {
-                                    image.classList.remove("hidden");
-                                    text.classList.add("hidden");
-                                };
-                                image.onerror = function() {
-                                    image.classList.add("hidden");
-                                    text.classList.remove("hidden");
-                                };
-                                image.src = url;
                             }
 
                             /* ==================================================
@@ -2036,31 +1923,6 @@
                                 reader.readAsDataURL(file);
                             }
 
-                            function previewIconUrl(input, previewId) {
-                                const preview = document.getElementById(previewId);
-
-                                if (!preview) {
-                                    return;
-                                }
-
-                                const url = input.value.trim();
-
-                                if (url === "") {
-                                    return;
-                                }
-
-                                preview.src = url;
-                                preview.classList.remove("hidden");
-
-                                preview.onload = function() {
-                                    preview.classList.remove("hidden");
-                                };
-
-                                preview.onerror = function() {
-                                    preview.classList.add("hidden");
-                                };
-                            }
-
                             /* ==================================================
                                PACKAGE MENU
                                ================================================== */
@@ -2069,9 +1931,6 @@
                                 previewIconFile(input, "packageMenuIconPreview");
                             }
 
-                            function previewPackageMenuIconUrl(input) {
-                                previewIconUrl(input, "packageMenuIconPreview");
-                            }
 
                             /* ==================================================
                                BOX PACKAGE
@@ -2079,10 +1938,6 @@
 
                             function previewBoxPackageIcon(input) {
                                 previewIconFile(input, "boxPackageIconPreview");
-                            }
-
-                            function previewBoxPackageIconUrl(input) {
-                                previewIconUrl(input, "boxPackageIconPreview");
                             }
 
                             /* ==================================================
@@ -2093,39 +1948,29 @@
                                 previewIconFile(input, "weddingPackageIconPreview");
                             }
 
-                            function previewWeddingPackageIconUrl(input) {
-                                previewIconUrl(input, "weddingPackageIconPreview");
-                            }
 
-                            function previewHeroImage() {
-                                const input = document.getElementById("heroImageUrl");
+                            function previewHeroImageFile(input) {
                                 const image = document.getElementById("heroImagePreview");
                                 const empty = document.getElementById("heroImageEmpty");
+                                const message = document.getElementById("heroImageSizeMessage");
+                                const file = input.files && input.files[0];
 
-                                if (!input || !image || !empty) {
+                                if (!image || !empty || !message || !file) return;
+
+                                if (file.size > 2 * 1024 * 1024) {
+                                    input.value = "";
+                                    message.classList.remove("hidden");
                                     return;
                                 }
 
-                                const url = input.value.trim();
-
-                                if (url === "") {
-                                    image.src = "";
-                                    image.classList.add("hidden");
-                                    empty.classList.remove("hidden");
-                                    return;
-                                }
-
-                                image.src = url;
-
-                                image.onload = function() {
+                                message.classList.add("hidden");
+                                const reader = new FileReader();
+                                reader.onload = function(event) {
+                                    image.src = event.target.result;
                                     image.classList.remove("hidden");
                                     empty.classList.add("hidden");
                                 };
-
-                                image.onerror = function() {
-                                    image.classList.add("hidden");
-                                    empty.classList.remove("hidden");
-                                };
+                                reader.readAsDataURL(file);
                             }
 
                             function toggleMenuSetting(contentId, arrowId) {
@@ -2171,33 +2016,28 @@
                                 lucide.createIcons();
                             }
 
-                            function previewCtaImage() {
-                                const input = document.getElementById("ctaImageUrl");
+                            function previewCtaImageFile(input) {
                                 const image = document.getElementById("ctaImagePreview");
                                 const empty = document.getElementById("ctaImageEmpty");
+                                const message = document.getElementById("ctaImageSizeMessage");
+                                const file = input.files && input.files[0];
 
-                                if (!input || !image || !empty) return;
+                                if (!image || !empty || !message || !file) return;
 
-                                const url = input.value.trim();
-
-                                if (url === "") {
-                                    image.removeAttribute("src");
-                                    image.classList.add("hidden");
-                                    empty.classList.remove("hidden");
+                                if (file.size > 2 * 1024 * 1024) {
+                                    input.value = "";
+                                    message.classList.remove("hidden");
                                     return;
                                 }
 
-                                image.onload = function() {
+                                message.classList.add("hidden");
+                                const reader = new FileReader();
+                                reader.onload = function(event) {
+                                    image.src = event.target.result;
                                     image.classList.remove("hidden");
                                     empty.classList.add("hidden");
                                 };
-
-                                image.onerror = function() {
-                                    image.classList.add("hidden");
-                                    empty.classList.remove("hidden");
-                                };
-
-                                image.src = url;
+                                reader.readAsDataURL(file);
                             }
                         </script>
 </body>

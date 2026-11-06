@@ -9,7 +9,7 @@
 
     <link rel="icon" type="image/png" href="{{ asset('img/logojossgandos.png') }}">
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css" />
 
@@ -172,14 +172,18 @@
 
                                 @forelse ($menuPreviews as $preview)
                                     @php
+                                        // Gambar preview hanya diambil dari storage lokal.
+                                        $imagePath = ltrim((string) ($preview->image_path ?? ''), '/');
 
-                                        $imageUrl = \Illuminate\Support\Str::startsWith($preview->image_path, [
-                                            'http://',
-                                            'https://',
-                                        ])
-                                            ? $preview->image_path
-                                            : asset('storage/' . $preview->image_path);
+                                        if (str_starts_with($imagePath, 'public/')) {
+                                            $imagePath = substr($imagePath, 7);
+                                        }
 
+                                        if (str_starts_with($imagePath, 'storage/')) {
+                                            $imagePath = substr($imagePath, 8);
+                                        }
+
+                                        $imageUrl = $imagePath !== '' ? asset('storage/' . $imagePath) : '';
                                     @endphp
 
 
@@ -351,9 +355,9 @@
                     {{-- GAMBAR --}}
                     <div>
 
-                        <label class="block text-sm font-medium mb-2">
+                        <p class="block text-sm font-medium mb-2">
                             Gambar Preview
-                        </label>
+                        </p>
 
 
                         <div class="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-5">
@@ -374,48 +378,30 @@
                             </div>
 
 
-                            {{-- SUMBER GAMBAR --}}
+                            {{-- UPLOAD GAMBAR --}}
                             <div class="space-y-4">
 
                                 {{-- UPLOAD --}}
                                 <div>
 
-                                    <label class="block text-sm font-medium mb-2">
-                                        Upload Foto
+                                    <label for="addImageFile" class="block text-sm font-medium mb-2">
+                                        Upload Foto (JPG/PNG/WebP, maks 2MB)
                                     </label>
 
 
                                     <input type="file" name="image_file" id="addImageFile"
-                                        accept="image/jpeg,image/png,image/webp" onchange="handleAddFile()"
+                                        accept="image/jpeg,image/png,image/webp" required onchange="handleAddFile()"
                                         class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium" />
 
 
-                                    {{-- PESAN 1 MB --}}
                                     <p id="addFileSizeMessage" class="hidden mt-2 text-xs text-red-500 font-medium">
                                     </p>
 
-                                </div>
-
-
-                                {{-- URL --}}
-                                <div>
-
-                                    <label class="block text-sm font-medium mb-2">
-                                        Atau Gunakan URL
-                                    </label>
-
-
-                                    <input type="url" name="image_url" id="addImageUrl" oninput="handleAddUrl()"
-                                        placeholder="https://contoh.com/menu.jpg"
-                                        class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
-
-
-                                    <p id="addImageMessage" class="hidden mt-2 text-xs text-red-500">
-                                        Link gambar tidak dapat dimuat.
+                                    <p class="text-xs text-slate-400 mt-2">
+                                        Pilih foto maksimal 2 MB. Preview berubah setelah file dipilih.
                                     </p>
 
                                 </div>
-
                             </div>
 
                         </div>
@@ -429,7 +415,7 @@
                         {{-- STATUS --}}
                         <div>
 
-                            <label class="block text-sm font-medium mb-2">
+                            <label for="addActive" class="block text-sm font-medium mb-2">
                                 Status
                             </label>
 
@@ -453,12 +439,12 @@
                         {{-- URUTAN --}}
                         <div>
 
-                            <label class="block text-sm font-medium mb-2">
+                            <label for="addSort" class="block text-sm font-medium mb-2">
                                 Urutan
                             </label>
 
 
-                            <input type="number" name="sort_order"
+                            <input type="number" id="addSort" name="sort_order"
                                 value="{{ ($menuPreviews->max('sort_order') ?? 0) + 1 }}" min="1"
                                 class="w-full h-11 px-4 border border-slate-200 rounded-xl" />
 
@@ -537,9 +523,9 @@
                     {{-- GAMBAR --}}
                     <div>
 
-                        <label class="block text-sm font-medium mb-2">
+                        <p class="block text-sm font-medium mb-2">
                             Gambar Preview
-                        </label>
+                        </p>
 
 
                         <div class="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-5">
@@ -560,14 +546,14 @@
                             </div>
 
 
-                            {{-- SUMBER --}}
+                            {{-- UPLOAD --}}
                             <div class="space-y-4">
 
                                 {{-- FILE --}}
                                 <div>
 
-                                    <label class="block text-sm font-medium mb-2">
-                                        Ganti Upload Foto
+                                    <label for="updateImageFile" class="block text-sm font-medium mb-2">
+                                        Upload Foto (JPG/PNG/WebP, maks 2MB)
                                     </label>
 
 
@@ -576,32 +562,14 @@
                                         class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium" />
 
 
-                                    {{-- PESAN 1 MB --}}
                                     <p id="updateFileSizeMessage"
                                         class="hidden mt-2 text-xs text-red-500 font-medium"></p>
 
-                                </div>
-
-
-                                {{-- URL --}}
-                                <div>
-
-                                    <label class="block text-sm font-medium mb-2">
-                                        Atau Gunakan URL
-                                    </label>
-
-
-                                    <input type="url" name="image_url" id="updateImageUrl"
-                                        oninput="handleUpdateUrl()" placeholder="https://contoh.com/menu.jpg"
-                                        class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
-
-
-                                    <p id="updateImageMessage" class="hidden mt-2 text-xs text-red-500">
-                                        Link gambar tidak dapat dimuat.
+                                    <p class="text-xs text-slate-400 mt-2">
+                                        Pilih foto maksimal 2 MB. Preview berubah setelah file dipilih.
                                     </p>
 
                                 </div>
-
                             </div>
 
                         </div>
@@ -615,7 +583,7 @@
                         {{-- STATUS --}}
                         <div>
 
-                            <label class="block text-sm font-medium mb-2">
+                            <label for="updateActive" class="block text-sm font-medium mb-2">
                                 Status
                             </label>
 
@@ -639,7 +607,7 @@
                         {{-- URUTAN --}}
                         <div>
 
-                            <label class="block text-sm font-medium mb-2">
+                            <label for="updateSort" class="block text-sm font-medium mb-2">
                                 Urutan
                             </label>
 
@@ -832,11 +800,6 @@
                     "addImageFile"
                 );
 
-            const urlInput =
-                document.getElementById(
-                    "addImageUrl"
-                );
-
             const image =
                 document.getElementById(
                     "addPreviewImage"
@@ -852,12 +815,6 @@
                     "addFileSizeMessage"
                 );
 
-            const urlMessage =
-                document.getElementById(
-                    "addImageMessage"
-                );
-
-
             const file =
                 fileInput.files[0];
 
@@ -866,17 +823,11 @@
                 return;
             }
 
-
-            urlInput.value = "";
-
             message.classList.add("hidden");
 
-            urlMessage.classList.add("hidden");
+            /* CEK 2 MB */
 
-
-            /* CEK 1 MB */
-
-            if (file.size > 1024 * 1024) {
+            if (file.size > 2 * 1024 * 1024) {
 
                 fileInput.value = "";
 
@@ -888,7 +839,7 @@
 
 
                 message.textContent =
-                    "Ukuran foto lebih dari 1 MB. Maksimal ukuran foto adalah 1 MB.";
+                    "Ukuran foto lebih dari 2 MB. Maksimal ukuran foto adalah 2 MB.";
 
                 message.classList.remove("hidden");
 
@@ -923,112 +874,6 @@
         }
 
 
-        /* =====================================================
-           TAMBAH - URL
-        ====================================================== */
-
-        function handleAddUrl() {
-
-            const fileInput =
-                document.getElementById(
-                    "addImageFile"
-                );
-
-            const urlInput =
-                document.getElementById(
-                    "addImageUrl"
-                );
-
-            const image =
-                document.getElementById(
-                    "addPreviewImage"
-                );
-
-            const text =
-                document.getElementById(
-                    "addPreviewText"
-                );
-
-            const message =
-                document.getElementById(
-                    "addImageMessage"
-                );
-
-
-            const url =
-                urlInput.value.trim();
-
-
-            if (!url) {
-
-                message.classList.add(
-                    "hidden"
-                );
-
-                image.classList.add(
-                    "hidden"
-                );
-
-                text.classList.remove(
-                    "hidden"
-                );
-
-                image.src = "";
-
-                return;
-
-            }
-
-
-            fileInput.value = "";
-
-            message.classList.add(
-                "hidden"
-            );
-
-
-            image.onload =
-                function() {
-
-                    image.classList.remove(
-                        "hidden"
-                    );
-
-                    text.classList.add(
-                        "hidden"
-                    );
-
-                    message.classList.add(
-                        "hidden"
-                    );
-
-                };
-
-
-            image.onerror =
-                function() {
-
-                    image.classList.add(
-                        "hidden"
-                    );
-
-                    text.classList.remove(
-                        "hidden"
-                    );
-
-                    message.textContent =
-                        "Link gambar tidak dapat dimuat.";
-
-                    message.classList.remove(
-                        "hidden"
-                    );
-
-                };
-
-
-            image.src = url;
-
-        }
 
 
         /* =====================================================
@@ -1050,11 +895,6 @@
             const imageFile =
                 document.getElementById(
                     "updateImageFile"
-                );
-
-            const imageUrl =
-                document.getElementById(
-                    "updateImageUrl"
                 );
 
             const previewImage =
@@ -1109,47 +949,27 @@
 
             imageFile.value = "";
 
-            imageUrl.value = "";
-
             document
                 .getElementById(
                     "updateFileSizeMessage"
                 )
                 .classList.add("hidden");
 
-            document
-                .getElementById(
-                    "updateImageMessage"
-                )
-                .classList.add("hidden");
-
-
-            /* GAMBAR LAMA */
+            /* GAMBAR LAMA: selalu gunakan path storage lokal */
 
             if (preview.image_path) {
 
-                if (
-                    preview.image_path.startsWith(
-                        "http://"
-                    ) ||
-                    preview.image_path.startsWith(
-                        "https://"
-                    )
-                ) {
+                const imagePath = String(preview.image_path)
+                    .trim()
+                    .replace(/^\/+/, '')
+                    .replace(/^public\//, '')
+                    .replace(/^storage\//, '');
 
-                    imageUrl.value =
-                        preview.image_path;
+                const storageBaseUrl = @json(asset('storage'));
 
-                    previewImage.src =
-                        preview.image_path;
-
-                } else {
-
-                    previewImage.src =
-                        `/storage/${preview.image_path}`;
-
-                }
-
+                previewImage.src = imagePath ?
+                    `${storageBaseUrl}/${imagePath}` :
+                    "";
 
                 previewImage.classList.remove(
                     "hidden"
@@ -1224,11 +1044,6 @@
                     "updateImageFile"
                 );
 
-            const urlInput =
-                document.getElementById(
-                    "updateImageUrl"
-                );
-
             const image =
                 document.getElementById(
                     "updatePreviewImage"
@@ -1244,12 +1059,6 @@
                     "updateFileSizeMessage"
                 );
 
-            const urlMessage =
-                document.getElementById(
-                    "updateImageMessage"
-                );
-
-
             const file =
                 fileInput.files[0];
 
@@ -1257,22 +1066,14 @@
             if (!file) {
                 return;
             }
-
-
-            urlInput.value = "";
-
-            urlMessage.classList.add(
-                "hidden"
-            );
-
             message.classList.add(
                 "hidden"
             );
 
 
-            /* CEK 1 MB */
+            /* CEK 2 MB */
 
-            if (file.size > 1024 * 1024) {
+            if (file.size > 2 * 1024 * 1024) {
 
                 fileInput.value = "";
 
@@ -1286,7 +1087,7 @@
 
 
                 message.textContent =
-                    "Ukuran foto lebih dari 1 MB. Maksimal ukuran foto adalah 1 MB.";
+                    "Ukuran foto lebih dari 2 MB. Maksimal ukuran foto adalah 2 MB.";
 
                 message.classList.remove(
                     "hidden"
@@ -1323,97 +1124,6 @@
         }
 
 
-        /* =====================================================
-           UPDATE - URL
-        ====================================================== */
-
-        function handleUpdateUrl() {
-
-            const fileInput =
-                document.getElementById(
-                    "updateImageFile"
-                );
-
-            const urlInput =
-                document.getElementById(
-                    "updateImageUrl"
-                );
-
-            const image =
-                document.getElementById(
-                    "updatePreviewImage"
-                );
-
-            const text =
-                document.getElementById(
-                    "updatePreviewText"
-                );
-
-            const message =
-                document.getElementById(
-                    "updateImageMessage"
-                );
-
-
-            const url =
-                urlInput.value.trim();
-
-
-            if (!url) {
-                return;
-            }
-
-
-            fileInput.value = "";
-
-            message.classList.add(
-                "hidden"
-            );
-
-
-            image.onload =
-                function() {
-
-                    image.classList.remove(
-                        "hidden"
-                    );
-
-                    text.classList.add(
-                        "hidden"
-                    );
-
-                    message.classList.add(
-                        "hidden"
-                    );
-
-                };
-
-
-            image.onerror =
-                function() {
-
-                    image.classList.add(
-                        "hidden"
-                    );
-
-                    text.classList.remove(
-                        "hidden"
-                    );
-
-
-                    message.textContent =
-                        "Link gambar tidak dapat dimuat.";
-
-                    message.classList.remove(
-                        "hidden"
-                    );
-
-                };
-
-
-            image.src = url;
-
-        }
 
 
         /* =====================================================

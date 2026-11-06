@@ -21,65 +21,42 @@ class PromotionController extends Controller
     }
 
     /**
-     * Menambahkan promosi baru.
+     * Menambahkan promosi baru. Gambar wajib diunggah dari perangkat.
      */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'image_path' => 'nullable|string|max:500',
-            'image_url' => 'nullable|url|max:500',
-            'image_file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'image_file' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
             'is_active' => 'nullable|boolean',
             'sort_order' => 'nullable|integer|min:0',
-
             'is_home_popup' => 'nullable|boolean',
             'home_start_at' => 'nullable|date',
             'home_end_at' => 'nullable|date|after_or_equal:home_start_at',
+        ], [
+            'image_file.required' => 'Silakan pilih gambar promosi.',
+            'image_file.image' => 'File harus berupa gambar.',
+            'image_file.mimes' => 'Format gambar harus JPG, PNG, atau WebP.',
+            'image_file.max' => 'Ukuran foto maksimal 2 MB. Pilih foto maksimal 2 MB.',
         ]);
 
-        /*
-        |--------------------------------------------------------------------------
-        | GAMBAR PROMO
-        |--------------------------------------------------------------------------
-        | Bisa menggunakan:
-        | 1. Upload file
-        | 2. URL gambar
-        |--------------------------------------------------------------------------
-        */
+        $imagePath = $request->file('image_file')->store('promotions', 'public');
 
-        $imagePath = null;
-
-        if ($request->hasFile('image_file')) {
-
-            $imagePath = $request
-                ->file('image_file')
-                ->store('promotions', 'public');
-
-        } elseif (! empty($validated['image_url'])) {
-
-            $imagePath = $validated['image_url'];
-
+        try {
+            Promotion::create([
+                'image_path' => $imagePath,
+                'is_active' => $request->boolean('is_home_popup')
+                    ? true
+                    : $request->boolean('is_active'),
+                'sort_order' => $validated['sort_order'] ?? 0,
+                'is_home_popup' => $request->boolean('is_home_popup'),
+                'home_start_at' => $validated['home_start_at'] ?? null,
+                'home_end_at' => $validated['home_end_at'] ?? null,
+            ]);
+        } catch (\Throwable $e) {
+            // Hapus file baru jika penyimpanan data gagal.
+            Storage::disk('public')->delete($imagePath);
+            throw $e;
         }
-
-        if (! $imagePath) {
-            return back()
-                ->withErrors([
-                    'image_file' => 'Silakan upload file gambar atau masukkan URL gambar.',
-                ])
-                ->withInput();
-        }
-
-        Promotion::create([
-            'image_path' => $imagePath,
-            'is_active' => $request->boolean('is_home_popup')
-                ? true
-                : $request->boolean('is_active'),
-            'sort_order' => $validated['sort_order'] ?? 0,
-
-            'is_home_popup' => $request->boolean('is_home_popup'),
-            'home_start_at' => $validated['home_start_at'] ?? null,
-            'home_end_at' => $validated['home_end_at'] ?? null,
-        ]);
 
         return redirect()
             ->route('admin.promotions.index')
@@ -87,72 +64,56 @@ class PromotionController extends Controller
     }
 
     /**
-     * Mengubah promosi.
+     * Mengubah promosi. Gambar lama tetap digunakan jika tidak ada file baru.
      */
     public function update(Request $request, Promotion $promotion)
     {
         $validated = $request->validate([
-            'image_url' => 'nullable|url|max:500',
             'image_file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'is_active' => 'nullable|boolean',
             'sort_order' => 'nullable|integer|min:0',
-
             'is_home_popup' => 'nullable|boolean',
             'home_start_at' => 'nullable|date',
             'home_end_at' => 'nullable|date|after_or_equal:home_start_at',
+        ], [
+            'image_file.image' => 'File harus berupa gambar.',
+            'image_file.mimes' => 'Format gambar harus JPG, PNG, atau WebP.',
+            'image_file.max' => 'Ukuran foto maksimal 2 MB. Pilih foto maksimal 2 MB.',
         ]);
 
-        // Simpan path gambar lama
         $oldImagePath = $promotion->image_path;
-
-        // Gambar lama tetap digunakan jika tidak ada gambar baru
         $imagePath = $oldImagePath;
+        $newImagePath = null;
 
-        // Jika upload file baru
+        // Ganti gambar hanya jika pengguna memilih file baru.
         if ($request->hasFile('image_file')) {
-
-            // Simpan gambar baru
-            $imagePath = $request
-                ->file('image_file')
-                ->store('promotions', 'public');
-
-            // Hapus gambar lama jika merupakan file lokal
-            if (
-                $oldImagePath &&
-                ! str_starts_with($oldImagePath, 'http://') &&
-                ! str_starts_with($oldImagePath, 'https://') &&
-                Storage::disk('public')->exists($oldImagePath)
-            ) {
-                Storage::disk('public')->delete($oldImagePath);
-            }
-
-            // Jika menggunakan URL baru
-        } elseif (! empty($validated['image_url'])) {
-
-            $imagePath = $validated['image_url'];
-
-            // Hapus gambar lama jika merupakan file lokal
-            if (
-                $oldImagePath &&
-                ! str_starts_with($oldImagePath, 'http://') &&
-                ! str_starts_with($oldImagePath, 'https://') &&
-                Storage::disk('public')->exists($oldImagePath)
-            ) {
-                Storage::disk('public')->delete($oldImagePath);
-            }
+            $newImagePath = $request->file('image_file')->store('promotions', 'public');
+            $imagePath = $newImagePath;
         }
 
-        $promotion->update([
-            'image_path' => $imagePath,
-            'is_active' => $request->boolean('is_home_popup') && $request->input('home_start_at')
-                ? true
-                : $request->boolean('is_active'),
-            'sort_order' => $validated['sort_order'] ?? 0,
+        try {
+            $promotion->update([
+                'image_path' => $imagePath,
+                'is_active' => $request->boolean('is_home_popup') && $request->input('home_start_at')
+                    ? true
+                    : $request->boolean('is_active'),
+                'sort_order' => $validated['sort_order'] ?? $promotion->sort_order,
+                'is_home_popup' => $request->boolean('is_home_popup'),
+                'home_start_at' => $validated['home_start_at'] ?? null,
+                'home_end_at' => $validated['home_end_at'] ?? null,
+            ]);
+        } catch (\Throwable $e) {
+            // Hapus file baru jika pembaruan data gagal.
+            if ($newImagePath) {
+                Storage::disk('public')->delete($newImagePath);
+            }
+            throw $e;
+        }
 
-            'is_home_popup' => $request->boolean('is_home_popup'),
-            'home_start_at' => $validated['home_start_at'] ?? null,
-            'home_end_at' => $validated['home_end_at'] ?? null,
-        ]);
+        // Hapus gambar lama setelah data berhasil diperbarui dan jika tidak dipakai lagi.
+        if ($newImagePath && $oldImagePath && $oldImagePath !== $newImagePath) {
+            $this->deleteLocalImageIfUnused($oldImagePath);
+        }
 
         return redirect()
             ->route('admin.promotions.index')
@@ -164,21 +125,46 @@ class PromotionController extends Controller
      */
     public function destroy(Promotion $promotion)
     {
-        // Hapus file gambar jika merupakan file lokal
-        if (
-            $promotion->image_path &&
-            ! str_starts_with($promotion->image_path, 'http://') &&
-            ! str_starts_with($promotion->image_path, 'https://') &&
-            Storage::disk('public')->exists($promotion->image_path)
-        ) {
-            Storage::disk('public')->delete($promotion->image_path);
-        }
+        $oldImagePath = $promotion->image_path;
+        $deleted = $promotion->delete();
 
-        // Hapus data promosi dari database
-        $promotion->delete();
+        // Hapus file hanya jika data berhasil dihapus dan gambar tidak dipakai lagi.
+        if ($deleted) {
+            $this->deleteLocalImageIfUnused($oldImagePath);
+        }
 
         return redirect()
             ->route('admin.promotions.index')
             ->with('success', 'Promosi berhasil dihapus.');
+    }
+
+    /**
+     * Hapus gambar lokal jika sudah tidak digunakan promosi lain.
+     * URL eksternal dan file di luar folder promotions tidak dihapus.
+     */
+    private function deleteLocalImageIfUnused(?string $path): void
+    {
+        $localPath = trim((string) $path);
+
+        if ($localPath === '' || preg_match('#^https?://#i', $localPath)) {
+            return;
+        }
+
+        $localPath = preg_replace('#^/?storage/#i', '', $localPath);
+        $localPath = ltrim($localPath, '/');
+
+        if (
+            str_contains($localPath, '..') ||
+            !str_starts_with($localPath, 'promotions/') ||
+            !Storage::disk('public')->exists($localPath)
+        ) {
+            return;
+        }
+
+        $stillUsed = Promotion::where('image_path', $path)->exists();
+
+        if (!$stillUsed) {
+            Storage::disk('public')->delete($localPath);
+        }
     }
 }

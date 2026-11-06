@@ -9,7 +9,7 @@
 
     <link rel="icon" type="image/png" href="{{ asset('img/logojossgandos.png') }}">
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     {{-- Unicons untuk Sidebar --}}
     <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css" />
@@ -63,6 +63,34 @@
                 </button>
             </header>
 
+            {{-- NOTIFIKASI HASIL AKSI DAN VALIDASI --}}
+            <div class="px-4 md:px-6 pt-4 space-y-3" aria-live="polite">
+                @if (session('success'))
+                    <div id="gallerySuccessNotification" role="status"
+                        class="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 transition-all duration-300">
+                        <i data-lucide="check-circle" class="w-5 h-5 shrink-0 mt-0.5"></i>
+                        <div class="font-medium">{{ session('success') }}</div>
+                    </div>
+                @endif
+
+                @if ($errors->any())
+                    <div role="alert"
+                        class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                        <div class="flex items-start gap-3">
+                            <i data-lucide="alert-circle" class="w-5 h-5 shrink-0 mt-0.5"></i>
+                            <div>
+                                <p class="font-semibold">Data belum berhasil disimpan. Periksa kembali:</p>
+                                <ul class="mt-2 list-disc space-y-1 pl-5">
+                                    @foreach ($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+            </div>
+
             {{-- ================================================= --}}
             {{-- GALLERY SETTINGS --}}
             {{-- ================================================= --}}
@@ -106,9 +134,11 @@
 
                         {{-- ISI HEADER --}}
                         <div id="galleryHeaderSetting" class="hidden border-t border-slate-100">
-                            <form action="{{ route('gallery.settings.update') }}" method="POST">
+                            <form action="{{ route('gallery.settings.update') }}" method="POST"
+                                enctype="multipart/form-data">
                                 @csrf
                                 @method ('PUT')
+                                <input type="hidden" name="form_context" value="gallery_header">
 
                                 <div class="p-6">
                                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -116,11 +146,12 @@
                                         <div class="space-y-5">
                                             {{-- LABEL --}}
                                             <div>
-                                                <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                                <label for="galleryHeroBadge"
+                                                    class="block text-sm font-semibold text-slate-700 mb-2">
                                                     Label
                                                 </label>
 
-                                                <input type="text" name="hero_badge"
+                                                <input type="text" id="galleryHeroBadge" name="hero_badge"
                                                     value="{{ old('hero_badge', $gallerySetting->hero_badge ?? '') }}"
                                                     placeholder="Contoh: DOKUMENTASI"
                                                     class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
@@ -128,11 +159,12 @@
 
                                             {{-- JUDUL --}}
                                             <div>
-                                                <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                                <label for="galleryHeroTitle"
+                                                    class="block text-sm font-semibold text-slate-700 mb-2">
                                                     Judul
                                                 </label>
 
-                                                <input type="text" name="hero_title"
+                                                <input type="text" id="galleryHeroTitle" name="hero_title"
                                                     value="{{ old('hero_title', $gallerySetting->hero_title ?? '') }}"
                                                     placeholder="Contoh: Galeri Kami"
                                                     class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
@@ -140,11 +172,13 @@
 
                                             {{-- DESKRIPSI --}}
                                             <div>
-                                                <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                                <label for="galleryHeroDescription"
+                                                    class="block text-sm font-semibold text-slate-700 mb-2">
                                                     Deskripsi
                                                 </label>
 
-                                                <textarea name="hero_description" rows="6" placeholder="Masukkan deskripsi header Gallery..."
+                                                <textarea id="galleryHeroDescription" name="hero_description" rows="6"
+                                                    placeholder="Masukkan deskripsi header Gallery..."
                                                     class="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none resize-y focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">{{ old('hero_description', $gallerySetting->hero_description ?? '') }}</textarea
                                                 >
                                             </div>
@@ -152,22 +186,39 @@
 
                                         {{-- KOLOM KANAN --}}
                                         <div>
-                                            <label
-                                                class="block text-sm font-semibold text-slate-700 mb-2"
-                                            >
-                                                URL Background Hero
+                                            @php
+                                                $heroImagePath = ltrim($gallerySetting->hero_image ?? '', '/');
+
+                                                if (str_starts_with($heroImagePath, 'storage/')) {
+                                                    $heroImageUrl = asset($heroImagePath);
+                                                } elseif (str_starts_with($heroImagePath, 'public/storage/')) {
+                                                    $heroImageUrl = asset(substr($heroImagePath, 7));
+                                                } elseif (str_starts_with($heroImagePath, 'public/')) {
+                                                    $heroImageUrl = asset('storage/' . substr($heroImagePath, 7));
+                                                } elseif ($heroImagePath) {
+                                                    $heroImageUrl = asset('storage/' . $heroImagePath);
+                                                } else {
+                                                    $heroImageUrl = '';
+                                                }
+                                            @endphp
+
+                                            <label for="heroImageFile" class="block text-sm font-semibold text-slate-700 mb-2">
+                                                Background Hero
                                             </label>
 
                                             <input
-                                                type="url"
+                                                type="file"
                                                 name="hero_image"
-                                                id="heroImageUrl"
-                                                value="{{ old('hero_image', $gallerySetting->hero_image ?? '') }}"
-                                                placeholder="https://..."
-                                                oninput="previewHeroImage()"
-                                                onchange="previewHeroImage()"
-                                                class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                                                id="heroImageFile"
+                                                accept=".jpg,.jpeg,.png,.webp"
+                                                onchange="handleHeroImageFile()"
+                                                class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium"
                                             />
+                                            <p class="mt-2 text-xs text-slate-500">Pilih foto maksimal 2 MB. Preview berubah setelah file dipilih.</p>
+                                            <p id="heroImageSizeMessage" class="hidden mt-2 text-xs text-red-500" role="alert"></p>
+                                            @error('hero_image')
+<p class="mt-2 text-xs text-red-500">{{ $message }}</p>
+@enderror
 
                                             {{-- PREVIEW --}}
                                             <div class="mt-4">
@@ -175,31 +226,19 @@
                                                     id="heroImagePreview"
                                                     class="relative w-full h-72 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50"
                                                 >
-                                                    {{-- GAMBAR --}}
                                                     <img
                                                         id="heroImagePreviewImg"
-                                                        src="{{ old('hero_image', $gallerySetting->hero_image ?? '') }}"
-                                                        alt="Preview Hero"
-                                                        class="w-full h-full object-cover
-                                                               {{ empty(old('hero_image', $gallerySetting->hero_image ?? '')) ? 'hidden' : '' }}"
+                                                        src="{{ $heroImageUrl }}"
+                                                        alt="Preview Background Hero"
+                                                        class="w-full h-full object-cover {{ $heroImageUrl ? '' : 'hidden' }}"
                                                     />
 
-                                                    {{-- KOSONG --}}
                                                     <div
                                                         id="heroImagePlaceholder"
-                                                        class="{{ !empty(old('hero_image', $gallerySetting->hero_image ?? '')) ? 'hidden' : '' }}
-                                                               absolute inset-0 flex flex-col items-center justify-center text-slate-400"
+                                                        class="{{ $heroImageUrl ? 'hidden' : '' }} absolute inset-0 flex flex-col items-center justify-center text-slate-400"
                                                     >
-                                                        <i
-                                                            data-lucide="image"
-                                                            class="w-10 h-10 mb-2"
-                                                        >
-                                                        </i>
-
-                                                        <span class="text-sm">
-                                                            Preview gambar akan
-                                                            tampil di sini
-                                                        </span>
+                                                        <i data-lucide="image" class="w-10 h-10 mb-2"></i>
+                                                        <span class="text-sm">Preview gambar akan tampil di sini</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -285,6 +324,7 @@
                             >
                                 @csrf
                                 @method ('PUT')
+                                <input type="hidden" name="form_context" value="gallery_cta">
 
                                 <div class="p-6 space-y-8">
                                     {{-- INSTAGRAM --}}
@@ -331,7 +371,7 @@
                                         >
                                             {{-- JUDUL --}}
                                             <div>
-                                                <label
+                                                <label for="galleryCtaTitle"
                                                     class="block text-sm font-semibold text-slate-700 mb-2"
                                                 >
                                                     Judul
@@ -339,7 +379,7 @@
 
                                                 <input
                                                     type="text"
-                                                    name="cta_title"
+                                                    id="galleryCtaTitle" name="cta_title"
                                                     value="{{ old('cta_title', $gallerySetting->cta_title ?? '') }}"
                                                     placeholder="Punya momen seru di Resto Joss Gandos?"
                                                     class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
@@ -348,7 +388,7 @@
 
                                             {{-- LINK --}}
                                             <div>
-                                                <label
+                                                <label for="galleryCtaInstagramLink"
                                                     class="block text-sm font-semibold text-slate-700 mb-2"
                                                 >
                                                     Link Instagram
@@ -356,6 +396,7 @@
 
                                                 <input
                                                     type="url"
+                                                    id="galleryCtaInstagramLink"
                                                     name="cta_button_1_link"
                                                     value="{{ old('cta_button_1_link', $gallerySetting->cta_button_1_link ?? '') }}"
                                                     placeholder="https://www.instagram.com/restojossgandos/"
@@ -365,13 +406,14 @@
 
                                             {{-- DESKRIPSI --}}
                                             <div class="lg:col-span-2">
-                                                <label
+                                                <label for="galleryCtaDescription"
                                                     class="block text-sm font-semibold text-slate-700 mb-2"
                                                 >
                                                     Deskripsi
                                                 </label>
 
                                                 <textarea
+                                                    id="galleryCtaDescription"
                                                     name="cta_description"
                                                     rows="3"
                                                     placeholder="Bagikan momen Anda dan tag kami di media sosial!"
@@ -426,7 +468,7 @@
                                         >
                                             {{-- JUDUL --}}
                                             <div>
-                                                <label
+                                                <label for="galleryCtaWhatsappTitle"
                                                     class="block text-sm font-semibold text-slate-700 mb-2"
                                                 >
                                                     Judul
@@ -434,7 +476,7 @@
 
                                                 <input
                                                     type="text"
-                                                    name="cta_whatsapp_title"
+                                                    id="galleryCtaWhatsappTitle" name="cta_whatsapp_title"
                                                     value="{{ old('cta_whatsapp_title', $gallerySetting->cta_whatsapp_title ?? '') }}"
                                                     placeholder="Butuh bantuan atau ingin reservasi?"
                                                     class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
@@ -443,7 +485,7 @@
 
                                             {{-- LINK --}}
                                             <div>
-                                                <label
+                                                <label for="galleryCtaWhatsappLink"
                                                     class="block text-sm font-semibold text-slate-700 mb-2"
                                                 >
                                                     Link WhatsApp
@@ -451,6 +493,7 @@
 
                                                 <input
                                                     type="text"
+                                                    id="galleryCtaWhatsappLink"
                                                     name="cta_button_2_link"
                                                     value="{{ old('cta_button_2_link', $gallerySetting->cta_button_2_link ?? '') }}"
                                                     placeholder="6289699071599 atau https://wa.me/6289699071599"
@@ -462,13 +505,14 @@
 
                                             {{-- DESKRIPSI --}}
                                             <div class="lg:col-span-2">
-                                                <label
+                                                <label for="galleryCtaWhatsappDescription"
                                                     class="block text-sm font-semibold text-slate-700 mb-2"
                                                 >
                                                     Deskripsi
                                                 </label>
 
                                                 <textarea
+                                                    id="galleryCtaWhatsappDescription"
                                                     name="cta_whatsapp_description"
                                                     rows="3"
                                                     placeholder="Tim kami siap membantu Anda untuk reservasi dan informasi."
@@ -580,6 +624,7 @@
                                             name="frame"
                                             value="1"
                                         />
+                                        <input type="hidden" name="form_context" value="gallery_frame_1">
 
                                         <div class="space-y-5">
                                             {{-- FOTO --}}
@@ -589,27 +634,33 @@
                                                 >
                                                     {{-- PREVIEW KIRI --}}
                                                     <div>
-                                                        <label
+                                                        <p
                                                             class="block text-sm font-semibold text-slate-700 mb-3"
                                                         >
                                                             Foto
-                                                        </label>
+                                                        </p>
 
                                                         <div
                                                             class="w-[220px] aspect-[4/3] mx-auto lg:mx-0 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center"
                                                         >
                                                             @php
-                                                                $frame1Image = $gallerySetting->frame_1_image ?? '';
+                                                                $frame1Image = ltrim(
+                                                                    $gallerySetting->frame_1_image ?? '',
+                                                                    '/',
+                                                                );
 
-                                                                if (
-                                                                    str_starts_with($frame1Image, 'http://') ||
-                                                                    str_starts_with($frame1Image, 'https://')
+                                                                if (str_starts_with($frame1Image, 'storage/')) {
+                                                                    $frame1Url = asset($frame1Image);
+                                                                } elseif (
+                                                                    str_starts_with($frame1Image, 'public/storage/')
                                                                 ) {
-                                                                    $frame1Url = $frame1Image;
-                                                                } elseif ($frame1Image) {
+                                                                    $frame1Url = asset(substr($frame1Image, 7));
+                                                                } elseif (str_starts_with($frame1Image, 'public/')) {
                                                                     $frame1Url = asset(
-                                                                        'storage/' . ltrim($frame1Image, '/'),
+                                                                        'storage/' . substr($frame1Image, 7),
                                                                     );
+                                                                } elseif ($frame1Image) {
+                                                                    $frame1Url = asset('storage/' . $frame1Image);
                                                                 } else {
                                                                     $frame1Url = '';
                                                                 }
@@ -631,11 +682,11 @@
                                                         </div>
                                                     </div>
 
-                                                    {{-- UPLOAD + URL KANAN --}}
+                                                    {{-- UPLOAD KANAN --}}
                                                     <div class="space-y-4">
                                                         {{-- UPLOAD --}}
                                                         <div>
-                                                            <label
+                                                            <label for="frame1Upload"
                                                                 class="block text-sm font-semibold text-slate-700 mb-2"
                                                             >
                                                                 Upload Foto
@@ -652,34 +703,13 @@
                                                                 class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium"
                                                             />
 
-                                                            <p class="mt-1 text-xs text-slate-400">Maksimal 1 MB.</p>
-
-                                                            <p
-                                                                id="frame1SizeMessage"
-                                                                class="hidden mt-2 text-xs text-red-500"
-                                                            >Ukuran file lebih dari 1 MB. Harap kompres gambar terlebih dahulu hingga maksimal 1 MB.</p>
+                                                            <p class="mt-2 text-xs text-slate-500">Pilih foto maksimal 2 MB. Preview berubah setelah file dipilih.</p>
+                                                            <p id="frame1SizeMessage" class="hidden mt-2 text-xs text-red-500" role="alert"></p>
+                                                            @error('frame_1_upload')
+<p class="mt-2 text-xs text-red-500">{{ $message }}</p>
+@enderror
                                                         </div>
 
-                                                        {{-- URL --}}
-                                                        <div>
-                                                            <label
-                                                                class="block text-sm font-semibold text-slate-700 mb-2"
-                                                            >
-                                                                Atau Gunakan URL
-                                                            </label>
-
-                                                            <input
-                                                                type="url"
-                                                                name="frame_1_image"
-                                                                id="frame1Url"
-                                                                value="{{ old('frame_1_image', str_starts_with($gallerySetting->frame_1_image ?? '', 'http://') || str_starts_with($gallerySetting->frame_1_image ?? '', 'https://') ? $gallerySetting->frame_1_image : '') }}"
-                                                                oninput="
-                                                                    previewFrame1Url()
-                                                                "
-                                                                placeholder="https://contoh.com/foto.jpg"
-                                                                class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                                                            />
-                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -688,11 +718,11 @@
                                             <div>
                                                 <label
                                                     class="block text-sm font-semibold text-slate-700 mb-2"
-                                                >
+                                                 for="galleryFrame1Description">
                                                     Deskripsi
                                                 </label>
 
-                                                <textarea
+                                                <textarea id="galleryFrame1Description"
                                                     name="frame_1_description"
                                                     rows="4"
                                                     placeholder="Masukkan deskripsi bingkai..."
@@ -745,6 +775,7 @@
                                             name="frame"
                                             value="2"
                                         />
+                                        <input type="hidden" name="form_context" value="gallery_frame_2">
 
                                         <div class="space-y-5">
                                             {{-- FOTO --}}
@@ -754,27 +785,33 @@
                                                 >
                                                     {{-- PREVIEW KIRI --}}
                                                     <div>
-                                                        <label
+                                                        <p
                                                             class="block text-sm font-semibold text-slate-700 mb-3"
                                                         >
                                                             Foto
-                                                        </label>
+                                                        </p>
 
                                                         <div
                                                             class="w-[220px] aspect-[4/3] mx-auto lg:mx-0 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center"
                                                         >
                                                             @php
-                                                                $frame2Image = $gallerySetting->frame_2_image ?? '';
+                                                                $frame2Image = ltrim(
+                                                                    $gallerySetting->frame_2_image ?? '',
+                                                                    '/',
+                                                                );
 
-                                                                if (
-                                                                    str_starts_with($frame2Image, 'http://') ||
-                                                                    str_starts_with($frame2Image, 'https://')
+                                                                if (str_starts_with($frame2Image, 'storage/')) {
+                                                                    $frame2Url = asset($frame2Image);
+                                                                } elseif (
+                                                                    str_starts_with($frame2Image, 'public/storage/')
                                                                 ) {
-                                                                    $frame2Url = $frame2Image;
-                                                                } elseif ($frame2Image) {
+                                                                    $frame2Url = asset(substr($frame2Image, 7));
+                                                                } elseif (str_starts_with($frame2Image, 'public/')) {
                                                                     $frame2Url = asset(
-                                                                        'storage/' . ltrim($frame2Image, '/'),
+                                                                        'storage/' . substr($frame2Image, 7),
                                                                     );
+                                                                } elseif ($frame2Image) {
+                                                                    $frame2Url = asset('storage/' . $frame2Image);
                                                                 } else {
                                                                     $frame2Url = '';
                                                                 }
@@ -796,11 +833,11 @@
                                                         </div>
                                                     </div>
 
-                                                    {{-- UPLOAD + URL KANAN --}}
+                                                    {{-- UPLOAD KANAN --}}
                                                     <div class="space-y-4">
                                                         {{-- UPLOAD --}}
                                                         <div>
-                                                            <label
+                                                            <label for="frame2Upload"
                                                                 class="block text-sm font-semibold text-slate-700 mb-2"
                                                             >
                                                                 Upload Foto
@@ -817,34 +854,13 @@
                                                                 class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium"
                                                             />
 
-                                                            <p class="mt-1 text-xs text-slate-400">Maksimal 1 MB.</p>
-
-                                                            <p
-                                                                id="frame2SizeMessage"
-                                                                class="hidden mt-2 text-xs text-red-500"
-                                                            >Ukuran file lebih dari 1 MB. Harap kompres gambar terlebih dahulu hingga maksimal 1 MB.</p>
+                                                            <p class="mt-2 text-xs text-slate-500">Pilih foto maksimal 2 MB. Preview berubah setelah file dipilih.</p>
+                                                            <p id="frame2SizeMessage" class="hidden mt-2 text-xs text-red-500" role="alert"></p>
+                                                            @error('frame_2_upload')
+<p class="mt-2 text-xs text-red-500">{{ $message }}</p>
+@enderror
                                                         </div>
 
-                                                        {{-- URL --}}
-                                                        <div>
-                                                            <label
-                                                                class="block text-sm font-semibold text-slate-700 mb-2"
-                                                            >
-                                                                Atau Gunakan URL
-                                                            </label>
-
-                                                            <input
-                                                                type="url"
-                                                                name="frame_2_image"
-                                                                id="frame2Url"
-                                                                value="{{ old('frame_2_image', str_starts_with($gallerySetting->frame_2_image ?? '', 'http://') || str_starts_with($gallerySetting->frame_2_image ?? '', 'https://') ? $gallerySetting->frame_2_image : '') }}"
-                                                                oninput="
-                                                                    previewFrame2Url()
-                                                                "
-                                                                placeholder="https://contoh.com/foto.jpg"
-                                                                class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                                                            />
-                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -853,11 +869,11 @@
                                             <div>
                                                 <label
                                                     class="block text-sm font-semibold text-slate-700 mb-2"
-                                                >
+                                                 for="galleryFrame2Description">
                                                     Deskripsi
                                                 </label>
 
-                                                <textarea
+                                                <textarea id="galleryFrame2Description"
                                                     name="frame_2_description"
                                                     rows="4"
                                                     placeholder="Masukkan deskripsi bingkai..."
@@ -1000,17 +1016,14 @@
                                             @php
                                                 $imagePath = ltrim($photo->image_path ?? '', '/');
 
-                                                if (
-                                                    \Illuminate\Support\Str::startsWith($imagePath, [
-                                                        'http://',
-                                                        'https://',
-                                                    ])
-                                                ) {
-                                                    $imageUrl = $imagePath;
-                                                } elseif (\Illuminate\Support\Str::startsWith($imagePath, 'storage/')) {
+                                                if (\Illuminate\Support\Str::startsWith($imagePath, 'storage/')) {
                                                     $imageUrl = asset($imagePath);
-                                                } elseif (\Illuminate\Support\Str::startsWith($imagePath, 'public/')) {
+                                                } elseif (
+                                                    \Illuminate\Support\Str::startsWith($imagePath, 'public/storage/')
+                                                ) {
                                                     $imageUrl = asset(substr($imagePath, 7));
+                                                } elseif (\Illuminate\Support\Str::startsWith($imagePath, 'public/')) {
+                                                    $imageUrl = asset('storage/' . substr($imagePath, 7));
                                                 } else {
                                                     $imageUrl = asset('storage/' . $imagePath);
                                                 }
@@ -1197,13 +1210,14 @@
                 enctype="multipart/form-data"
             >
                 @csrf
+                <input type="hidden" name="form_context" value="gallery_add">
 
                 <div class="p-6 space-y-5">
                     {{-- FOTO GALLERY --}}
                     <div>
-                        <label class="block text-sm font-medium mb-3">
+                        <p class="block text-sm font-medium mb-3">
                             Foto Gallery
-                        </label>
+                        </p>
 
                         <div
                             class="grid grid-cols-1 sm:grid-cols-[220px_1fr] gap-7 items-start"
@@ -1231,7 +1245,7 @@
                                 <div>
                                     <label
                                         class="block text-sm font-medium mb-2"
-                                    >
+                                     for="addImageFile">
                                         Upload File
                                     </label>
                                     <input
@@ -1239,27 +1253,15 @@
                                         name="image_file"
                                         id="addImageFile"
                                         accept=".jpg,.jpeg,.png,.webp"
+                                        required
                                         onchange="handleAddGalleryFile()"
                                         class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium"
                                     />
-                                    <p id="addImageSizeMessage" class="hidden mt-2 text-xs text-red-500">Ukuran file lebih dari 1 MB. Harap kompres gambar terlebih dahulu hingga maksimal 1 MB.</p>
-                                </div>
-
-                                {{-- URL --}}
-                                <div>
-                                    <label
-                                        class="block text-sm font-medium mb-2"
-                                    >
-                                        Atau Gunakan URL
-                                    </label>
-                                    <input
-                                        type="url"
-                                        name="image_path"
-                                        id="addImageUrl"
-                                        oninput="previewAddGalleryUrl()"
-                                        placeholder="https://contoh.com/foto.jpg"
-                                        class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                                    />
+                                    <p class="mt-2 text-xs text-slate-500">Pilih foto maksimal 2 MB. Preview berubah setelah file dipilih.</p>
+                                    <p id="addImageSizeMessage" class="hidden mt-2 text-xs text-red-500" role="alert"></p>
+                                    @error('image_file')
+<p class="mt-2 text-xs text-red-500">{{ $message }}</p>
+@enderror
                                 </div>
                             </div>
                         </div>
@@ -1267,7 +1269,7 @@
 
                     {{-- JUDUL --}}
                     <div>
-                        <label
+                        <label for="addTitle"
                             class="block text-sm font-semibold text-slate-700 mb-2"
                         >
                             Judul
@@ -1275,36 +1277,48 @@
                         <input
                             type="text"
                             name="title"
+                            id="addTitle"
                             required
                             class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                         />
+                        @error('title')
+<p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+@enderror
                     </div>
 
                     {{-- DESKRIPSI --}}
                     <div>
-                        <label
+                        <label for="addDescription"
                             class="block text-sm font-semibold text-slate-700 mb-2"
                         >
                             Deskripsi
                         </label>
                         <textarea
                             name="description"
+                            id="addDescription"
                             rows="4"
                             class="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none resize-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                         ></textarea>
+                                                @error('description')
+                                                    <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                                                @enderror
                                             </div>
 
                                             {{-- KATEGORI --}}
                                             <div>
-                                                <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                                <label class="block text-sm font-semibold text-slate-700 mb-2"
+                                                    for="addCategory">
                                                     Kategori
                                                 </label>
-                                                <select name="category" required
+                                                <select name="category" id="addCategory" required
                                                     class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">
                                                     <option value="momen">Momen</option>
                                                     <option value="facility">Fasilitas</option>
                                                     <option value="event">Event</option>
                                                 </select>
+                                                @error('category')
+                                                    <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                                                @enderror
                                             </div>
                                         </div>
 
@@ -1348,13 +1362,16 @@
                             <form id="updateForm" method="POST" enctype="multipart/form-data">
                                 @csrf
                                 @method ('PUT')
+                                <input type="hidden" name="form_context" value="gallery_update">
+                                <input type="hidden" name="photo_id" id="updatePhotoId"
+                                    value="{{ old('photo_id') }}">
 
                                 <div class="p-6 space-y-5">
                                     {{-- FOTO GALLERY --}}
                                     <div>
-                                        <label class="block text-sm font-medium mb-3">
+                                        <p class="block text-sm font-medium mb-3">
                                             Foto Gallery
-                                        </label>
+                                        </p>
 
                                         <div class="grid grid-cols-1 sm:grid-cols-[220px_1fr] gap-7 items-start">
                                             {{-- PREVIEW SELALU TERSEDIA --}}
@@ -1371,29 +1388,21 @@
                                             <div class="space-y-4">
                                                 {{-- UPLOAD --}}
                                                 <div>
-                                                    <label class="block text-sm font-medium mb-2">
+                                                    <label class="block text-sm font-medium mb-2"
+                                                        for="updateImageFile">
                                                         Ganti File
                                                     </label>
                                                     <input type="file" name="image_file" id="updateImageFile"
                                                         accept=".jpg,.jpeg,.png,.webp"
                                                         onchange="handleUpdateGalleryFile()"
                                                         class="block w-full text-sm text-slate-500 border border-slate-200 rounded-xl cursor-pointer bg-white file:mr-3 file:py-2.5 file:px-3 file:border-0 file:bg-slate-100 file:text-slate-700 file:font-medium" />
-                                                    <p class="mt-1 text-xs text-slate-400">Maksimal 1 MB.</p>
+                                                    <p class="mt-2 text-xs text-slate-500">Pilih foto maksimal 2 MB.
+                                                        Preview berubah setelah file dipilih.</p>
                                                     <p id="updateImageSizeMessage"
-                                                        class="hidden mt-2 text-xs text-red-500">Ukuran file lebih dari
-                                                        1 MB. Harap kompres gambar terlebih dahulu hingga maksimal 1 MB.
-                                                    </p>
-                                                </div>
-
-                                                {{-- URL --}}
-                                                <div>
-                                                    <label class="block text-sm font-medium mb-2">
-                                                        Atau Gunakan URL
-                                                    </label>
-                                                    <input type="url" name="image_path" id="updateImage"
-                                                        oninput="previewUpdateGalleryUrl()"
-                                                        placeholder="https://contoh.com/foto.jpg"
-                                                        class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+                                                        class="hidden mt-2 text-xs text-red-500" role="alert"></p>
+                                                    @error('image_file')
+                                                        <p class="mt-2 text-xs text-red-500">{{ $message }}</p>
+                                                    @enderror
                                                 </div>
                                             </div>
                                         </div>
@@ -1401,25 +1410,34 @@
 
                                     {{-- JUDUL --}}
                                     <div>
-                                        <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                        <label for="updateTitle"
+                                            class="block text-sm font-semibold text-slate-700 mb-2">
                                             Judul
                                         </label>
                                         <input type="text" id="updateTitle" name="title" required
                                             class="w-full h-11 px-4 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+                                        @error('title')
+                                            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                                        @enderror
                                     </div>
 
                                     {{-- DESKRIPSI --}}
                                     <div>
-                                        <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                        <label for="updateDescription"
+                                            class="block text-sm font-semibold text-slate-700 mb-2">
                                             Deskripsi
                                         </label>
                                         <textarea id="updateDescription" name="description" rows="4"
                                             class="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none resize-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"></textarea>
+                                        @error('description')
+                                            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                                        @enderror
                                     </div>
 
                                     {{-- KATEGORI --}}
                                     <div>
-                                        <label class="block text-sm font-semibold text-slate-700 mb-2">
+                                        <label for="updateCategory"
+                                            class="block text-sm font-semibold text-slate-700 mb-2">
                                             Kategori
                                         </label>
                                         <select id="updateCategory" name="category" required
@@ -1428,6 +1446,9 @@
                                             <option value="facility">Fasilitas</option>
                                             <option value="event">Event</option>
                                         </select>
+                                        @error('category')
+                                            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                                        @enderror
                                     </div>
                                 </div>
 
@@ -1453,8 +1474,154 @@
                     <script>
                         lucide.createIcons();
 
-                        // Tampilkan preview Hero jika URL sudah tersimpan.
-                        previewHeroImage();
+                        // Notifikasi berhasil hilang otomatis setelah 4 detik.
+                        const gallerySuccessNotification = document.getElementById("gallerySuccessNotification");
+                        if (gallerySuccessNotification) {
+                            window.setTimeout(() => {
+                                gallerySuccessNotification.classList.add("opacity-0", "-translate-y-2");
+                                window.setTimeout(() => {
+                                    gallerySuccessNotification.remove();
+                                }, 350);
+                            }, 4000);
+                        }
+
+                        // ========================================
+                        // VALIDASI DAN PREVIEW UPLOAD GAMBAR
+                        // ========================================
+
+                        const MAX_GALLERY_IMAGE_SIZE = 2 * 1024 * 1024;
+                        const ALLOWED_GALLERY_IMAGE_EXTENSION = /\.(jpe?g|png|webp)$/i;
+
+                        function validateGalleryImageFile(file, input, message) {
+                            if (!file || !input || !message) {
+                                return false;
+                            }
+
+                            if (!ALLOWED_GALLERY_IMAGE_EXTENSION.test(file.name)) {
+                                input.value = "";
+                                message.textContent = "Format gambar harus JPG, JPEG, PNG, atau WebP.";
+                                message.classList.remove("hidden");
+                                return false;
+                            }
+
+                            if (file.size > MAX_GALLERY_IMAGE_SIZE) {
+                                input.value = "";
+                                message.textContent = "Ukuran file melebihi 2 MB. Pilih foto maksimal 2 MB.";
+                                message.classList.remove("hidden");
+                                return false;
+                            }
+
+                            message.textContent = "";
+                            message.classList.add("hidden");
+                            return true;
+                        }
+
+                        function showGalleryImagePreview(file, image, placeholder) {
+                            if (!file || !image) {
+                                return;
+                            }
+
+                            const reader = new FileReader();
+                            reader.onload = function(event) {
+                                image.src = event.target.result;
+                                image.classList.remove("hidden");
+
+                                if (placeholder) {
+                                    placeholder.classList.add("hidden");
+                                }
+                            };
+                            reader.readAsDataURL(file);
+                        }
+
+                        function handleHeroImageFile() {
+                            const input = document.getElementById("heroImageFile");
+                            const image = document.getElementById("heroImagePreviewImg");
+                            const placeholder = document.getElementById("heroImagePlaceholder");
+                            const message = document.getElementById("heroImageSizeMessage");
+                            const file = input && input.files ? input.files[0] : null;
+
+                            if (!file) {
+                                return;
+                            }
+
+                            if (!validateGalleryImageFile(file, input, message)) {
+                                return;
+                            }
+
+                            showGalleryImagePreview(file, image, placeholder);
+                        }
+
+                        function previewFrame1File() {
+                            const input = document.getElementById("frame1Upload");
+                            const image = document.getElementById("frame1PreviewImage");
+                            const placeholder = document.getElementById("frame1PreviewText");
+                            const message = document.getElementById("frame1SizeMessage");
+                            const file = input && input.files ? input.files[0] : null;
+
+                            if (!file) {
+                                return;
+                            }
+
+                            if (!validateGalleryImageFile(file, input, message)) {
+                                return;
+                            }
+
+                            showGalleryImagePreview(file, image, placeholder);
+                        }
+
+                        function previewFrame2File() {
+                            const input = document.getElementById("frame2Upload");
+                            const image = document.getElementById("frame2PreviewImage");
+                            const placeholder = document.getElementById("frame2PreviewText");
+                            const message = document.getElementById("frame2SizeMessage");
+                            const file = input && input.files ? input.files[0] : null;
+
+                            if (!file) {
+                                return;
+                            }
+
+                            if (!validateGalleryImageFile(file, input, message)) {
+                                return;
+                            }
+
+                            showGalleryImagePreview(file, image, placeholder);
+                        }
+
+                        function handleAddGalleryFile() {
+                            const input = document.getElementById("addImageFile");
+                            const image = document.getElementById("addPreviewImage");
+                            const placeholder = document.getElementById("addPreviewText");
+                            const message = document.getElementById("addImageSizeMessage");
+                            const file = input && input.files ? input.files[0] : null;
+
+                            if (!file) {
+                                return;
+                            }
+
+                            if (!validateGalleryImageFile(file, input, message)) {
+                                return;
+                            }
+
+                            showGalleryImagePreview(file, image, placeholder);
+                        }
+
+                        function handleUpdateGalleryFile() {
+                            const input = document.getElementById("updateImageFile");
+                            const image = document.getElementById("updatePreviewImage");
+                            const placeholder = document.getElementById("updatePreviewText");
+                            const message = document.getElementById("updateImageSizeMessage");
+                            const file = input && input.files ? input.files[0] : null;
+
+                            if (!file) {
+                                return;
+                            }
+
+                            if (!validateGalleryImageFile(file, input, message)) {
+                                return;
+                            }
+
+                            showGalleryImagePreview(file, image, placeholder);
+                        }
 
                         // ========================================
                         // GALLERY SETTINGS ACCORDION
@@ -1476,299 +1643,6 @@
                             }
 
                             lucide.createIcons();
-                        }
-
-                        // ========================================
-                        // PREVIEW BACKGROUND HERO GALLERY
-                        // ========================================
-
-                        function previewHeroImage() {
-                            const input = document.getElementById("heroImageUrl");
-                            const preview = document.getElementById("heroImagePreview");
-                            const image = document.getElementById("heroImagePreviewImg");
-                            const placeholder = document.getElementById("heroImagePlaceholder");
-
-                            if (!input || !preview || !image || !placeholder) {
-                                return;
-                            }
-
-                            const url = input.value.trim();
-
-                            // Kotak preview selalu tetap terlihat.
-                            preview.classList.remove("hidden");
-
-                            if (!url) {
-                                image.classList.add("hidden");
-                                placeholder.classList.remove("hidden");
-                                image.src = "";
-                                return;
-                            }
-
-                            image.onload = function() {
-                                image.classList.remove("hidden");
-                                placeholder.classList.add("hidden");
-                            };
-
-                            image.onerror = function() {
-                                image.classList.add("hidden");
-                                placeholder.classList.remove("hidden");
-                                image.src = "";
-                            };
-
-                            image.src = url;
-                        }
-
-                        function previewFrame1File() {
-                            const input = document.getElementById("frame1Upload");
-                            const urlInput = document.getElementById("frame1Url");
-                            const image = document.getElementById("frame1PreviewImage");
-                            const text = document.getElementById("frame1PreviewText");
-                            const message = document.getElementById("frame1SizeMessage");
-
-                            const file = input.files[0];
-
-                            if (!file) return;
-
-                            // Maksimal 1 MB
-                            if (file.size > 1024 * 1024) {
-                                input.value = "";
-                                message.classList.remove("hidden");
-                                image.src = "";
-                                image.classList.add("hidden");
-                                text.classList.remove("hidden");
-                                return;
-                            }
-
-                            message.classList.add("hidden");
-                            urlInput.value = "";
-
-                            const reader = new FileReader();
-
-                            reader.onload = function(event) {
-                                image.src = event.target.result;
-                                image.classList.remove("hidden");
-                                text.classList.add("hidden");
-                            };
-
-                            reader.readAsDataURL(file);
-                        }
-
-                        function previewFrame1Url() {
-                            const input = document.getElementById("frame1Url");
-                            const fileInput = document.getElementById("frame1Upload");
-                            const image = document.getElementById("frame1PreviewImage");
-                            const text = document.getElementById("frame1PreviewText");
-
-                            const url = input.value.trim();
-
-                            if (!url) return;
-
-                            fileInput.value = "";
-
-                            image.onload = function() {
-                                image.classList.remove("hidden");
-                                text.classList.add("hidden");
-                            };
-
-                            image.onerror = function() {
-                                image.classList.add("hidden");
-                                text.classList.remove("hidden");
-                            };
-
-                            image.src = url;
-                        }
-
-                        function previewFrame2File() {
-                            const input = document.getElementById("frame2Upload");
-                            const urlInput = document.getElementById("frame2Url");
-                            const image = document.getElementById("frame2PreviewImage");
-                            const text = document.getElementById("frame2PreviewText");
-                            const message = document.getElementById("frame2SizeMessage");
-
-                            const file = input.files[0];
-
-                            if (!file) return;
-
-                            // Maksimal 1 MB
-                            if (file.size > 1024 * 1024) {
-                                input.value = "";
-                                message.classList.remove("hidden");
-                                image.src = "";
-                                image.classList.add("hidden");
-                                text.classList.remove("hidden");
-                                return;
-                            }
-
-                            message.classList.add("hidden");
-                            urlInput.value = "";
-
-                            const reader = new FileReader();
-
-                            reader.onload = function(event) {
-                                image.src = event.target.result;
-                                image.classList.remove("hidden");
-                                text.classList.add("hidden");
-                            };
-
-                            reader.readAsDataURL(file);
-                        }
-
-                        function previewFrame2Url() {
-                            const input = document.getElementById("frame2Url");
-                            const fileInput = document.getElementById("frame2Upload");
-                            const image = document.getElementById("frame2PreviewImage");
-                            const text = document.getElementById("frame2PreviewText");
-
-                            const url = input.value.trim();
-
-                            if (!url) return;
-
-                            fileInput.value = "";
-
-                            image.onload = function() {
-                                image.classList.remove("hidden");
-                                text.classList.add("hidden");
-                            };
-
-                            image.onerror = function() {
-                                image.classList.add("hidden");
-                                text.classList.remove("hidden");
-                            };
-
-                            image.src = url;
-                        }
-
-                        // ========================================
-                        // PREVIEW FOTO TAMBAH
-                        // ========================================
-
-                        function handleAddGalleryFile() {
-                            const fileInput = document.getElementById("addImageFile");
-                            const urlInput = document.getElementById("addImageUrl");
-                            const image = document.getElementById("addPreviewImage");
-                            const text = document.getElementById("addPreviewText");
-                            const message = document.getElementById("addImageSizeMessage");
-                            const file = fileInput.files[0];
-
-                            if (!file) return;
-
-                            if (file.size > 1024 * 1024) {
-                                fileInput.value = "";
-                                message.classList.remove("hidden");
-                                image.src = "";
-                                image.classList.add("hidden");
-                                text.classList.remove("hidden");
-                                urlInput.disabled = false;
-                                return;
-                            }
-
-                            message.classList.add("hidden");
-                            urlInput.value = "";
-                            urlInput.disabled = true;
-
-                            const reader = new FileReader();
-                            reader.onload = function(event) {
-                                image.src = event.target.result;
-                                image.classList.remove("hidden");
-                                text.classList.add("hidden");
-                            };
-                            reader.readAsDataURL(file);
-                        }
-
-                        function previewAddGalleryUrl() {
-                            const fileInput = document.getElementById("addImageFile");
-                            const urlInput = document.getElementById("addImageUrl");
-                            const image = document.getElementById("addPreviewImage");
-                            const text = document.getElementById("addPreviewText");
-                            const url = urlInput.value.trim();
-                            const sizeMessage = document.getElementById("addImageSizeMessage");
-
-                            sizeMessage.classList.add("hidden");
-
-                            if (!url) {
-                                fileInput.disabled = false;
-                                image.src = "";
-                                image.classList.add("hidden");
-                                text.classList.remove("hidden");
-                                return;
-                            }
-
-                            fileInput.value = "";
-                            fileInput.disabled = true;
-
-                            image.onload = function() {
-                                image.classList.remove("hidden");
-                                text.classList.add("hidden");
-                            };
-
-                            image.onerror = function() {
-                                image.classList.add("hidden");
-                                text.classList.remove("hidden");
-                            };
-
-                            image.src = url;
-                        }
-
-                        // ========================================
-                        // PREVIEW FOTO UPDATE
-                        // ========================================
-
-                        function handleUpdateGalleryFile() {
-                            const fileInput = document.getElementById("updateImageFile");
-                            const urlInput = document.getElementById("updateImage");
-                            const image = document.getElementById("updatePreviewImage");
-                            const text = document.getElementById("updatePreviewText");
-                            const message = document.getElementById("updateImageSizeMessage");
-                            const file = fileInput.files[0];
-
-                            if (!file) return;
-
-                            if (file.size > 1024 * 1024) {
-                                fileInput.value = "";
-                                message.classList.remove("hidden");
-                                urlInput.disabled = false;
-                                return;
-                            }
-
-                            message.classList.add("hidden");
-                            urlInput.value = "";
-                            urlInput.disabled = true;
-
-                            const reader = new FileReader();
-                            reader.onload = function(event) {
-                                image.src = event.target.result;
-                                image.classList.remove("hidden");
-                                text.classList.add("hidden");
-                            };
-                            reader.readAsDataURL(file);
-                        }
-
-                        function previewUpdateGalleryUrl() {
-                            const fileInput = document.getElementById("updateImageFile");
-                            const urlInput = document.getElementById("updateImage");
-                            const image = document.getElementById("updatePreviewImage");
-                            const text = document.getElementById("updatePreviewText");
-                            const url = urlInput.value.trim();
-
-                            if (!url) {
-                                fileInput.disabled = false;
-                                return;
-                            }
-
-                            fileInput.value = "";
-                            fileInput.disabled = true;
-
-                            image.onload = function() {
-                                image.classList.remove("hidden");
-                                text.classList.add("hidden");
-                            };
-
-                            image.onerror = function() {
-                                image.classList.add("hidden");
-                                text.classList.remove("hidden");
-                            };
-
-                            image.src = url;
                         }
 
                         /*
@@ -1851,56 +1725,42 @@
                         function openUpdateModal(photo) {
                             const modal = document.getElementById("updateModal");
                             const form = document.getElementById("updateForm");
-                            const imageUrlInput = document.getElementById("updateImage");
                             const imageFileInput = document.getElementById("updateImageFile");
                             const previewImage = document.getElementById("updatePreviewImage");
                             const previewText = document.getElementById("updatePreviewText");
-                            const sizeMessage = document.getElementById(
-                                "updateImageSizeMessage",
-                            );
+                            const sizeMessage = document.getElementById("updateImageSizeMessage");
 
                             form.action = `/dashboard/gallery/${photo.id}`;
+                            document.getElementById("updatePhotoId").value = photo.id;
 
                             document.getElementById("updateTitle").value = photo.title || "";
-                            document.getElementById("updateDescription").value =
-                                photo.description || "";
-                            document.getElementById("updateCategory").value =
-                                photo.category || "momen";
+                            document.getElementById("updateDescription").value = photo.description || "";
+                            document.getElementById("updateCategory").value = photo.category || "momen";
 
                             imageFileInput.value = "";
-                            imageFileInput.disabled = false;
+                            sizeMessage.textContent = "";
                             sizeMessage.classList.add("hidden");
-                            imageUrlInput.value = "";
-                            imageUrlInput.disabled = false;
 
-                            const imagePath = photo.image_path || "";
+                            const imagePath = (photo.image_path || "").replace(/^\/+/, "");
 
                             if (imagePath) {
-                                let imageUrl = imagePath;
+                                let imageUrl;
 
-                                if (
-                                    !imagePath.startsWith("http://") &&
-                                    !imagePath.startsWith("https://")
-                                ) {
-                                    if (imagePath.startsWith("storage/")) {
-                                        imageUrl = "/" + imagePath;
-                                    } else {
-                                        imageUrl = "/storage/" + imagePath.replace(/^\/+/, "");
-                                    }
+                                if (imagePath.startsWith("storage/")) {
+                                    imageUrl = "/" + imagePath;
+                                } else if (imagePath.startsWith("public/storage/")) {
+                                    imageUrl = "/" + imagePath.substring(7);
+                                } else if (imagePath.startsWith("public/")) {
+                                    imageUrl = "/storage/" + imagePath.substring(7);
+                                } else {
+                                    imageUrl = "/storage/" + imagePath;
                                 }
 
                                 previewImage.src = imageUrl;
                                 previewImage.classList.remove("hidden");
                                 previewText.classList.add("hidden");
-
-                                if (
-                                    imagePath.startsWith("http://") ||
-                                    imagePath.startsWith("https://")
-                                ) {
-                                    imageUrlInput.value = imagePath;
-                                }
                             } else {
-                                previewImage.src = "";
+                                previewImage.removeAttribute("src");
                                 previewImage.classList.add("hidden");
                                 previewText.classList.remove("hidden");
                             }
@@ -1939,6 +1799,65 @@
                                     closeUpdateModal();
                                 }
                             });
+
+                        // Pulihkan panel/modal yang sesuai saat validasi server gagal.
+                        const galleryValidationErrors = @json($errors->keys());
+                        const galleryFormContext = @json(old('form_context', ''));
+                        const galleryOldInput = @json(old());
+                        const galleryPhotosById = @json($photos->keyBy('id'));
+
+                        if (galleryValidationErrors.length > 0) {
+                            if (galleryFormContext === "gallery_header") {
+                                toggleGallerySetting("galleryHeaderSetting", "galleryHeaderChevron");
+                            } else if (galleryFormContext === "gallery_cta") {
+                                toggleGallerySetting("galleryCtaSetting", "galleryCtaChevron");
+                            } else if (galleryFormContext === "gallery_frame_1" || galleryFormContext === "gallery_frame_2") {
+                                toggleGallerySetting("galleryFrameSetting", "galleryFrameChevron");
+                            } else if (galleryFormContext === "gallery_add") {
+                                openAddModal();
+                                document.getElementById("addTitle").value = galleryOldInput.title || "";
+                                document.getElementById("addDescription").value = galleryOldInput.description || "";
+                                document.getElementById("addCategory").value = galleryOldInput.category || "momen";
+                            } else if (galleryFormContext === "gallery_update") {
+                                const photoId = galleryOldInput.photo_id;
+                                const photo = photoId ? galleryPhotosById[photoId] : null;
+
+                                if (photo) {
+                                    openUpdateModal(photo);
+                                    document.getElementById("updateTitle").value = galleryOldInput.title || "";
+                                    document.getElementById("updateDescription").value = galleryOldInput.description || "";
+                                    document.getElementById("updateCategory").value = galleryOldInput.category || "momen";
+                                }
+                            }
+                        }
+
+                        // ========================================
+                        // PERTAHANKAN FILTER KATEGORI SETELAH EDIT
+                        // ========================================
+                        const galleryCategoryFilter = document.getElementById("categoryFilter");
+                        const galleryUpdateForm = document.getElementById("updateForm");
+                        const savedGalleryCategory = sessionStorage.getItem("galleryCategoryAfterEdit");
+
+                        // Pulihkan kategori setelah halaman kembali dimuat.
+                        if (galleryCategoryFilter && savedGalleryCategory) {
+                            galleryCategoryFilter.value = savedGalleryCategory;
+                            sessionStorage.removeItem("galleryCategoryAfterEdit");
+                            filterGallery();
+                        }
+
+                        // Simpan kategori yang sedang dipilih sebelum form edit dikirim.
+                        if (galleryUpdateForm) {
+                            galleryUpdateForm.addEventListener("submit", function() {
+                                if (galleryCategoryFilter) {
+                                    sessionStorage.setItem(
+                                        "galleryCategoryAfterEdit",
+                                        galleryCategoryFilter.value
+                                    );
+                                }
+                            });
+                        }
+
+                        lucide.createIcons();
                     </script>
 </body>
 
