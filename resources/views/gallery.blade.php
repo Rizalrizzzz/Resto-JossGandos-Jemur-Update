@@ -811,7 +811,10 @@
                 overflow: hidden;
             }
 
+            /* Diubah: pakai flex column agar media berhenti pas di bawah dots */
             #gallery-detail-modal .gallery-modal-shell {
+                display: flex;
+                flex-direction: column;
                 border-radius: 22px;
                 height: 88vh;
                 max-height: 88vh;
@@ -834,8 +837,12 @@
                 background: transparent;
             }
 
+            /* Diubah: tinggi auto & tidak melar */
             #gallery-detail-modal .gallery-modal-media {
-                padding: 10px;
+                padding: 10px 10px 8px;
+                height: auto !important;
+                min-height: 0 !important;
+                flex: 0 0 auto !important;
             }
 
             #gallery-detail-modal .gallery-modal-main-image-wrap {
@@ -851,6 +858,7 @@
 
             #gallery-detail-modal .gallery-modal-thumbs {
                 margin-top: 12px;
+                margin-bottom: 0;
                 overflow-x: auto;
                 overflow-y: hidden;
                 touch-action: pan-x;
@@ -863,10 +871,21 @@
                 flex: 0 0 auto;
             }
 
+            /* Ditambahkan: rapikan jarak & tinggi dots */
+            #gallery-detail-modal .gallery-modal-dots {
+                padding-top: 8px;
+                padding-bottom: 4px;
+                min-height: 0 !important;
+                height: auto !important;
+                flex: 0 0 auto !important;
+            }
+
+            /* Diubah: padding atas dirapikan agar tidak terlalu jauh dari dots */
             #gallery-detail-modal .gallery-modal-info {
-                padding: 30px 20px 38px;
+                padding: 20px 20px 38px;
                 display: block;
                 overflow: visible;
+                flex: 1 0 auto;
             }
 
             #gallery-detail-modal .gallery-modal-close {
@@ -2524,8 +2543,8 @@
                             ${items
                                 .map(
                                     (item) => `
-                                                                                                                                                                                                                                                                                    <li>${escapeHtml(item)}</li>
-                                                                                                                                                                                                                                                                                `,
+                                                                                                                                                                                                                                                                                        <li>${escapeHtml(item)}</li>
+                                                                                                                                                                                                                                                                                    `,
                                 )
                                 .join("")}
                         </ol>
