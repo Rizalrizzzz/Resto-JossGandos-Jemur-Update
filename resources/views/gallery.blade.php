@@ -2543,8 +2543,8 @@
                             ${items
                                 .map(
                                     (item) => `
-                                                                                                                                                                                                                                                                                        <li>${escapeHtml(item)}</li>
-                                                                                                                                                                                                                                                                                    `,
+                                                                                                                                                                                                                                                                                                <li>${escapeHtml(item)}</li>
+                                                                                                                                                                                                                                                                                            `,
                                 )
                                 .join("")}
                         </ol>
@@ -2641,7 +2641,7 @@
 
                 galleryModal.classList.remove("hidden");
                 galleryModal.classList.add("is-open");
-
+                galleryModal.removeAttribute("inert");
                 galleryModal.setAttribute("aria-hidden", "false");
 
                 const galleryModalShell = galleryModal.querySelector(
@@ -2700,9 +2700,17 @@
             ===================================================== */
 
             function closeGalleryPopup() {
+                if (
+                    document.activeElement &&
+                    galleryModal.contains(document.activeElement)
+                ) {
+                    document.activeElement.blur();
+                }
+
                 galleryModal.classList.add("hidden");
                 galleryModal.classList.remove("is-open");
 
+                galleryModal.setAttribute("inert", "");
                 galleryModal.setAttribute("aria-hidden", "true");
 
                 document.body.classList.remove("overflow-hidden");
